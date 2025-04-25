@@ -146,7 +146,7 @@ export function registerAptosIndexerTools(server: McpServer) {
             'X-API-KEY': apiKey,
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            'User-Agent': 'nodit-mcp-server-poc'
+            'User-Agent': 'nodit-mcp-server'
           },
           body: JSON.stringify(requestBody),
         };

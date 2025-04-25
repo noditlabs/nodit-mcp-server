@@ -64,7 +64,7 @@ export function registerCallNoditApiTool(server: McpServer) {
       try {
         const apiOptions = {
             method: 'POST',
-            headers: { 'X-API-KEY': apiKey, 'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'nodit-mcp-server-poc' },
+            headers: { 'X-API-KEY': apiKey, 'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'nodit-mcp-server' },
             body: JSON.stringify(requestBody),
         }
 
