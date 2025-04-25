@@ -1,0 +1,27 @@
+{
+  "name": "@noditlabs/nodit-mcp-server",
+  "version": "1.0.0",
+  "type": "module",
+  "bin": {
+    "nodit-mcp-server": "build/index.js"
+  },
+  "scripts": {
+    "build": "rm -rf build && tsc && echo '#!/usr/bin/env node' | cat - build/index.js > temp && mv temp build/index.js && chmod 755 build/index.js && mkdir -p build/spec && cp -r spec/reference build/spec/reference && cp -r src/nodit-aptos-indexer-api-schema.json build/nodit-aptos-indexer-api-schema.json"
+  },
+  "files": [
+    "build"
+  ],
+  "main": "build/index.js",
+  "author": "lambda256",
+  "license": "Apache-2.0",
+  "description": "nodit-mcp-server",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.9.0",
+    "js-yaml": "^4.1.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.14.0"
+  }
+}
