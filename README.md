@@ -33,7 +33,7 @@ Nodit MCP Server provides tools enabling AI agents to dynamically discover, unde
 - **Get API Specification (`get_nodit_api_spec`)**  
   Obtain detailed information for a specific API operation (parameters, request/response schema).
 
-- **Call API (`call_nodit_api`)**  
+- **Call API (`call_nodit_api`,`call_nodit_aptos_indexer_api`)**  
   Execute an API call using the operationId and validated parameters.
 
 
@@ -61,10 +61,10 @@ For detailed API specifications and usage guidelines, please refer to the [Nodit
 ## Prerequisites
 
 - Node.js 18+
-- **Nodit API Key** (Sign up and get an API key at [Nodit Console](https://developer.nodit.io/))
+- **Nodit API Key** (Sign up and get an API key at [Nodit Console](https://nodit.lambda256.io/))
 
 
-## Installation
+## Installation & Integration
 
 ### Using npx (Recommended)
 
@@ -73,7 +73,7 @@ npx @noditlabs/nodit-mcp-server@latest
 ```
 
 
-### Using with Cursor IDE or Claude Desktop
+### Connect to Cursor IDE or Claude Desktop
 
 Add the following configuration to your `.cursor/mcp.json` or `claude_desktop_config.json`:
 
@@ -101,6 +101,23 @@ Add the following configuration to your `.cursor/mcp.json` or `claude_desktop_co
 > 🔔 **Important**  
 > Replace `****` with your actual Nodit API key.  
 > If the API key is not configured properly, API requests will fail due to authentication errors.
+
+### Connect to Claude CLI
+
+You can also use Nodit MCP Server directly with Claude CLI for a quick setup.
+
+Add Nodit MCP Server with the following commands:
+
+```bash
+# Add the Nodit MCP server
+claude mcp add nodit-mcp-server npx @noditlabs/nodit-mcp-server
+
+# Set API Key
+export NODIT_API_KEY=your-api-key
+
+# Start Claude with the Nodit MCP server enabled
+claude
+```
 
 ### Running Locally (Optional)
 
@@ -131,7 +148,6 @@ Then start the server:
 ```bash
 node build/index.js
 ```
-
 
 ## Scope & Limitations
 
