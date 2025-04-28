@@ -129,7 +129,7 @@ export NODIT_API_KEY=your-api-key
 Then start the server:
 
 ```bash
-npm start
+node build/index.js
 ```
 
 
