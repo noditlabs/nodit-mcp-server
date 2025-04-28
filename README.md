@@ -5,7 +5,7 @@ A Model Context Provider (MCP) server that connects AI agents and developers to 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18.0.0-green.svg)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0%2B-blue.svg)](https://www.typescriptlang.org/)
-
+[![smithery badge](https://smithery.ai/badge/@noditlabs/nodit-mcp-server)](https://smithery.ai/server/@noditlabs/nodit-mcp-server)
 
 ## Overview
 
