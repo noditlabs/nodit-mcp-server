@@ -19,7 +19,9 @@ async function main() {
   await server.connect(transport);
 }
 
-main().catch((error) => {
+main().then(() => {
+  log("Nodit MCP Server started successfully.");
+}).catch((error) => {
   log("Fatal error in main():", error);
   process.exit(1);
 });
