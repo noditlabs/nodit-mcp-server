@@ -1,34 +1,40 @@
 # Nodit MCP Server
-A Model Context Provider (MCP) server connects AI agents and developers to structured, context-ready blockchain data across multiple networks through Nodit's Web3 infrastructure.
+
+A Model Context Provider (MCP) server that connects AI agents and developers to structured, context-ready blockchain data across multiple networks through Nodit's Web3 infrastructure.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18.0.0-green.svg)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0%2B-blue.svg)](https://www.typescriptlang.org/)
 
+
 ## Overview
+
 Nodit MCP Server simplifies how AI models and applications interact with blockchain ecosystems.  
-Instead of dealing directly with complex node RPCs, raw event logs, or chain-specific data structures, developers can use the MCP to access normalized, multi-chain blockchain data in a format optimized for AI reasoning and decision-making.
+Instead of handling complex node RPCs, raw event logs, or chain-specific data structures, developers can access normalized, multi-chain blockchain data in a format optimized for AI reasoning and decision-making.
 
 With Nodit's MCP, you can:
-- Build AI agents that query, analyze, and act on real-time blockchain data across EVM-compatible chains and major non-EVM networks.
-- Create Web3-integrated applications without requiring specialized blockchain development knowledge.
-- Leverage Nodit's reliable node infrastructure, real-time Web3 Data APIs, and GraphQL indexing services through a unified and consistent access layer.
+- Build AI agents that query, analyze, and act on real-time blockchain data across EVM-compatible and non-EVM networks.
+- Create Web3-integrated applications without requiring specialized blockchain development expertise.
+- Leverage Nodit's reliable node infrastructure, Web3 Data APIs, and GraphQL indexing services through a unified access layer.
 
-Nodit MCP supports a wide range of blockchain networks, including Ethereum, Base, Optimism, Arbitrum, Polygon, Aptos, Bitcoin, Dogecoin, TRON, XRPL, and more.  
-It abstracts the complexity of Web3 data interactions, providing a developer-friendly bridge between AI models and decentralized networks.
+Supported networks include Ethereum, Base, Optimism, Arbitrum, Polygon, Aptos, Bitcoin, Dogecoin, TRON, XRPL, and more.
 
-Whether you're building intelligent blockchain agents, enhancing AI-driven Web3 experiences, or creating new decentralized applications, Nodit MCP accelerates your ability to bring blockchain intelligence into your AI systems.
 
 ## How Nodit MCP Tools Work
 
-Nodit MCP Server provides a set of tools that allow AI agents to dynamically discover, understand, and interact with Nodit's Web3 APIs and data infrastructure. These tools are designed to minimize token consumption and maintain a lightweight context by modularizing the API interaction process into distinct steps: listing available APIs, retrieving detailed specifications, and executing actual API calls.
+Nodit MCP Server provides tools enabling AI agents to dynamically discover, understand, and interact with Nodit's Web3 APIs and data infrastructure. The tools minimize token consumption and maintain a lightweight context by modularizing API interactions into distinct steps:
 
-The typical interaction flow is:
+- **List API Categories (`list_nodit_api_categories`)**  
+  Retrieve a list of high-level API categories available.
 
-1. **List API Categories (`list_nodit_api_categories`)** – Retrieve the list of high-level API categories available.
-2. **List API Operations (`list_nodit_node_apis`, `list_nodit_data_apis`, `list_nodit_aptos_indexer_api_query_root`)** – Fetch available operations within a selected category (Node APIs, Data APIs, Aptos Indexer APIs).
-3. **Get API Specification (`get_nodit_api_spec`)** – Obtain detailed information for a specific API operation (parameters, request/response schema).
-4. **Call API (`call_nodit_api`)** – Execute the API call using the operationId and validated parameters.
+- **List API Operations (`list_nodit_node_apis`, `list_nodit_data_apis`, `list_nodit_aptos_indexer_api_query_root`)**  
+  Fetch available operations within a selected category (Node APIs, Data APIs, Aptos Indexer APIs).
+
+- **Get API Specification (`get_nodit_api_spec`)**  
+  Obtain detailed information for a specific API operation (parameters, request/response schema).
+
+- **Call API (`call_nodit_api`)**  
+  Execute an API call using the operationId and validated parameters.
 
 
 ## Features
@@ -37,44 +43,47 @@ The following are the key features and supported blockchain networks provided th
 For detailed API specifications and usage guidelines, please refer to the [Nodit Developer Documentation](https://developer.nodit.io/).
 
 - **RPC Node & Node APIs**  
-  Direct access to blockchain node endpoints through Nodit's shared, professionally operated infrastructure.  
-  Supports real-time network state queries, transaction submissions, smart contract interactions, and more.
+  Access blockchain node endpoints through Nodit's professionally operated infrastructure.  
+  Supports real-time network queries, transaction submissions, smart contract interactions, and more.
 
 - **Web3 Data APIs**  
-  High-level query APIs that provide access to meticulously indexed blockchain data.  
+  High-level APIs for accessing meticulously indexed blockchain data.  
   Includes processed datasets such as block and transaction details, token transfer histories, account-level transaction summaries, and asset movement details — information that would be difficult to assemble directly through raw RPC calls.
 
 - **GraphQL Indexer APIs (Aptos only)**  
-  GraphQL-based access to indexed Aptos blockchain data.  
-  Designed for efficient querying of coin activities, token transfers, and other detailed on-chain activity records.
+  Query detailed Aptos blockchain activities through GraphQL endpoints.
 
 - **Supported Networks**  
-  Nodit MCP currently supports major blockchain networks, including:  
-  Ethereum, Arbitrum, Avalanche, Base, Kaia, Optimism, Polygon (EVM-compatible chains)  
-  and Aptos, Bitcoin, Dogecoin, TRON, XRPL (non-EVM chains).
+  - EVM-Compatible: Ethereum, Arbitrum, Avalanche, Base, Kaia, Optimism, Polygon
+  - Non-EVM: Aptos, Bitcoin, Dogecoin, TRON, XRPL
+
 
 ## Prerequisites
 
-- **Nodit API Key** (Sign up and generate your API key at [Nodit Console](https://developer.nodit.io/))
+- Node.js 18+
+- **Nodit API Key** (Sign up and get an API key at [Nodit Console](https://developer.nodit.io/))
+
 
 ## Installation
 
-### Using npx (Recommended for Quick Start)
+### Using npx (Recommended)
+
 ```bash
 npx @noditlabs/nodit-mcp-server@latest
 ```
 
+
 ### Using with Cursor IDE or Claude Desktop
-To use Nodit MCP Server with Cursor or Claude Desktop, add the following configuration to your `.cursor/mcp.json` or `claude_desktop_config.json`.
+
+Add the following configuration to your `.cursor/mcp.json` or `claude_desktop_config.json`:
 
 - **Cursor**
-  - Config file (MacOS): `~/.cursor/mcp.json`
-  - Config file (Windows): `C:\Users\<Username>\.cursor\mcp.json`
+  - MacOS: `~/.cursor/mcp.json`
+  - Windows: `C:\Users\<Username>\.cursor\mcp.json`
 
 - **Claude Desktop**
-  - Config file (MacOS): `~/Library/Application Support/Claude/claude_desktop_config.json`
-  - Config file (Windows): `C:\Users\<Username>\AppData\Roaming\Claude\claude_desktop_config.json`
-
+  - MacOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+  - Windows: `C:\Users\<Username>\AppData\Roaming\Claude\claude_desktop_config.json`
 
 ```json
 {
@@ -89,12 +98,13 @@ To use Nodit MCP Server with Cursor or Claude Desktop, add the following configu
   }
 }
 ```
-🔔 **Important:**
-Replace **** with your actual Nodit API key.
-If not configured correctly, API calls will fail due to authentication errors.
+> 🔔 **Important**  
+> Replace `****` with your actual Nodit API key.  
+> If the API key is not configured properly, API requests will fail due to authentication errors.
 
 ### Running Locally (Optional)
-Alternatively, you can clone and run the server locally:
+
+Clone and run the server locally:
 
 ```bash
 # Clone the repository
@@ -109,38 +119,42 @@ npm install
 # Build the project
 npm run build
 ```
-Before starting the server, set your Nodit API Key:
+
+Before starting, set your Nodit API key:
 
 ```bash
 export NODIT_API_KEY=your-api-key
 ```
-Then launch the server:
+
+Then start the server:
+
 ```bash
 npm start
 ```
 
+
 ## Scope & Limitations
 
-Nodit MCP Server is designed to help large language model (LLM)-based agents and applications effectively utilize Nodit's Web3 Data APIs and Node APIs.  
-Its core functions include:
+Nodit MCP Server provides structured context to help LLM-based agents utilize Nodit's APIs effectively.  
+Its responsibilities include:
 
-- Structuring and exposing Nodit's APIs in an LLM-consumable format, including endpoint details, input/output schemas, sample responses, and error handling guides.
-- Delivering **API usage context** that enables AI agents to dynamically select and invoke appropriate APIs based on user queries.
+- Structuring Nodit APIs (Node APIs, Web3 Data APIs) in an LLM-consumable format.
+- Exposing endpoint details, input/output schemas, sample responses, and error handling guidelines.
 
-However, the following are **outside the direct control of the MCP**:
+However, the following are **outside the MCP's control**:
+
+- API selection may vary depending on the LLM version (e.g., GPT-4, Claude 3), prompt engineering, or agent design.
+- Interpretation of API responses or errors depends on the consuming LLM's reasoning capabilities.
+
+Nodit MCP Server focuses on delivering accurate and structured API context,  
+but does **not guarantee** the final reasoning outcomes or behavior of external LLMs.
+
 
 ## License
 
 This project is licensed under the [Apache License 2.0](./LICENSE).  
-Please see the LICENSE file for the full license text.
-
+Refer to the LICENSE file for full license terms.  
 Relevant legal notices are provided in the [NOTICE](./NOTICE) file.
 
 "Nodit" and the Nodit logo are trademarks of Lambda256.  
 Use of the name or logo without prior written permission is prohibited.
-
-- API selection may vary depending on the LLM version (e.g., GPT-4, Claude 3), prompt engineering, or agent design.
-- Interpretation of API specifications, responses, or errors depends on the reasoning capabilities of the consuming LLM or agent.
-
-Nodit MCP Server focuses on providing accurate, structured context to support effective API use,  
-but it does **not guarantee** the reasoning outcomes or behaviors of external models.
