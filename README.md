@@ -65,7 +65,7 @@ For detailed API specifications and usage guidelines, please refer to the [Nodit
 - **Nodit API Key** (Sign up and get an API key at [Nodit Console](https://nodit.lambda256.io/))
 
 
-## Installation & Integration
+## Running Local Nodit MCP Server
 
 ### Using npx (Recommended)
 
@@ -73,54 +73,7 @@ For detailed API specifications and usage guidelines, please refer to the [Nodit
 npx @noditlabs/nodit-mcp-server@latest
 ```
 
-
-### Connect to Cursor IDE or Claude Desktop
-
-Add the following configuration to your `.cursor/mcp.json` or `claude_desktop_config.json`:
-
-- **Cursor**
-  - MacOS: `~/.cursor/mcp.json`
-  - Windows: `C:\Users\<Username>\.cursor\mcp.json`
-
-- **Claude Desktop**
-  - MacOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-  - Windows: `C:\Users\<Username>\AppData\Roaming\Claude\claude_desktop_config.json`
-
-```json
-{
-  "mcpServers": {
-    "nodit": {
-      "command": "npx",
-      "args": ["@noditlabs/nodit-mcp-server@latest"],
-      "env": {
-        "NODIT_API_KEY": "****"
-      }
-    }
-  }
-}
-```
-> 🔔 **Important**  
-> Replace `****` with your actual Nodit API key.  
-> If the API key is not configured properly, API requests will fail due to authentication errors.
-
-### Connect to Claude CLI
-
-You can also use Nodit MCP Server directly with Claude CLI for a quick setup.
-
-Add Nodit MCP Server with the following commands:
-
-```bash
-# Add the Nodit MCP server
-claude mcp add nodit-mcp-server npx @noditlabs/nodit-mcp-server
-
-# Set API Key
-export NODIT_API_KEY=your-api-key
-
-# Start Claude with the Nodit MCP server enabled
-claude
-```
-
-### Running Locally (Optional)
+### Using local build
 
 Clone and run the server locally:
 
@@ -173,6 +126,54 @@ echo '{"method":"tools/list","params":{},"jsonrpc":"2.0","id":1}' | node build/i
 
 ```bash
 echo '{"method":"tools/call","params":{"name":"list_nodit_api_categories","arguments":{}},"jsonrpc":"2.0","id":1}' | node build/index.js
+```
+
+## Integration 
+
+### Connecting to Cursor IDE or Claude Desktop
+
+Add the following configuration to your `.cursor/mcp.json` or `claude_desktop_config.json`:
+
+- **Cursor**
+  - MacOS: `~/.cursor/mcp.json`
+  - Windows: `C:\Users\<Username>\.cursor\mcp.json`
+
+- **Claude Desktop**
+  - MacOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+  - Windows: `C:\Users\<Username>\AppData\Roaming\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "nodit": {
+      "command": "npx",
+      "args": ["@noditlabs/nodit-mcp-server@latest"],
+      "env": {
+        "NODIT_API_KEY": "****"
+      }
+    }
+  }
+}
+```
+> 🔔 **Important**  
+> Replace `****` with your actual Nodit API key.  
+> If the API key is not configured properly, API requests will fail due to authentication errors.
+
+### Connecting to Claude CLI
+
+You can also use Nodit MCP Server directly with Claude CLI for a quick setup.
+
+Add Nodit MCP Server with the following commands:
+
+```bash
+# Add the Nodit MCP server
+claude mcp add nodit-mcp-server npx @noditlabs/nodit-mcp-server
+
+# Set API Key
+export NODIT_API_KEY=your-api-key
+
+# Start Claude with the Nodit MCP server enabled
+claude
 ```
 
 
