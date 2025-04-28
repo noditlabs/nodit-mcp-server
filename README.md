@@ -174,3 +174,6 @@ Relevant legal notices are provided in the [NOTICE](./NOTICE) file.
 
 "Nodit" and the Nodit logo are trademarks of Lambda256.  
 Use of the name or logo without prior written permission is prohibited.
+
+---
+© Lambda256. All rights reserved.
