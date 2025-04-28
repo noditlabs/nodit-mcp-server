@@ -125,7 +125,7 @@ Clone and run the server locally:
 
 ```bash
 # Clone the repository
-git clone https://github.com/noditlabs/nodit-mcp-server.git
+git clone --recurse-submodules https://github.com/noditlabs/nodit-mcp-server.git
 
 # Move into the project directory
 cd nodit-mcp-server
