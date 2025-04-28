@@ -19,7 +19,6 @@ With Nodit's MCP, you can:
 
 Supported networks include Ethereum, Base, Optimism, Arbitrum, Polygon, Aptos, Bitcoin, Dogecoin, TRON, XRPL, and more.
 
-
 ## How Nodit MCP Tools Work
 
 Nodit MCP Server provides tools enabling AI agents to dynamically discover, understand, and interact with Nodit's Web3 APIs and data infrastructure. The tools minimize token consumption and maintain a lightweight context by modularizing API interactions into distinct steps:
@@ -35,7 +34,9 @@ Nodit MCP Server provides tools enabling AI agents to dynamically discover, unde
 
 - **Call API (`call_nodit_api`,`call_nodit_aptos_indexer_api`)**  
   Execute an API call using the operationId and validated parameters.
-
+  
+Nodit MCP Server communicates using the standard JSON-RPC over stdio protocol, following the Model Context Protocol (MCP) conventions.
+Currently, only stdio-based communication is supported for server-client interactions.
 
 ## Features
 
@@ -148,6 +149,32 @@ Then start the server:
 ```bash
 node build/index.js
 ```
+
+### Communicating with the Local Server
+
+Once the Nodit MCP Server is running locally, you can communicate with it using **JSON-RPC over stdio**.  
+Here’s how you can send a basic request to the server:
+
+**Example: List available tools**
+
+You can directly input the JSON-RPC payload:
+
+```bash
+{"method":"tools/list","params":{},"jsonrpc":"2.0","id":1}
+```
+
+Or, you can pipe the request using the `echo` command:
+
+```bash
+echo '{"method":"tools/list","params":{},"jsonrpc":"2.0","id":1}' | node build/index.js
+```
+
+**Example: Call a specific tool (list_nodit_api_categories)**
+
+```bash
+echo '{"method":"tools/call","params":{"name":"list_nodit_api_categories","arguments":{}},"jsonrpc":"2.0","id":1}' | node build/index.js
+```
+
 
 ## Scope & Limitations
 
