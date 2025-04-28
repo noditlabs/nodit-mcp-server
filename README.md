@@ -75,8 +75,6 @@ npx @noditlabs/nodit-mcp-server@latest
 
 ### Using local build
 
-Clone and run the server locally:
-
 ```bash
 # Clone the repository
 git clone --recurse-submodules https://github.com/noditlabs/nodit-mcp-server.git
