@@ -23,6 +23,35 @@ const guideToUseNodit = `Please keep these rules in mind when using nodit tools:
 - If user asks about their usage stats or request history, kindly guide them to the Nodit Console(https://nodit.lambda256.io)—use the Dashboard for usage metrics and the Request Log(/request-logs) for detailed API call history.
 `;
 
+const nodeApiNetworks = {
+  "ethereum": ["mainnet", "sepolia", "holesky"],
+  "avalanche": ["mainnet", "fuji"],
+  "arbitrum": ["mainnet", "sepolia"],
+  "polygon": ["mainnet", "amoy"],
+  "base": ["mainnet", "sepolia"],
+  "optimism": ["mainnet", "sepolia"],
+  "kaia": ["mainnet", "kairos"],
+  "luniverse": ["mainnet"]
+}
+
+const dataApiNetworks = {
+  "ethereum": ["mainnet", "sepolia", "holesky"],
+  "arbitrum": ["mainnet", "sepolia"],
+  "polygon": ["mainnet", "amoy"],
+  "base": ["mainnet", "sepolia"],
+  "optimism": ["mainnet", "sepolia"],
+  "kaia": ["mainnet", "kairos"],
+  "luniverse": ["mainnet"],
+  "bitcoin": ["mainnet"],
+  "dogecoin": ["mainnet"],
+  "tron": ["mainnet"],
+  "xrpl": ["mainnet"],
+}
+
+const aptosApiNetworks = {
+  "aptos": ["mainnet", "testnet"]
+}
+
 export function registerApiCategoriesTools(server: McpServer) {
   const noditDataApiSpec: NoditOpenApiSpecType = loadNoditDataApiSpec();
   const noditNodeApiSpecMap: Map<string, NoditOpenApiSpecType> = loadNoditNodeApiSpecMap();
@@ -67,9 +96,28 @@ export function registerApiCategoriesTools(server: McpServer) {
           supportedProtocols: ["aptos"]
         },
       ];
-      const formattedList = categories.map(category =>
-        `  - name: ${category.name} supported protocols: ${category.supportedProtocols.join(', ')} description: ${category.description}`
-      ).join("\n");
+      const formattedList = categories.map(category => {
+        let networkInfo = '';
+
+        let networkMap;
+        if (category.name === "Nodit Node API") {
+          networkMap = nodeApiNetworks;
+        } else if (category.name === "Nodit Data API") {
+          networkMap = dataApiNetworks;
+        } else if (category.name === "Nodit Aptos Indexer API") {
+          networkMap = aptosApiNetworks;
+        }
+
+        if (networkMap) {
+          networkInfo = category.supportedProtocols
+            .filter(protocol => networkMap[protocol])
+            .map(protocol => `    - ${protocol}: ${networkMap[protocol].join(', ')}`)
+            .join('\n');
+        }
+
+        return `  - name: ${category.name}, description: ${category.description} supported protocol and network:
+${networkInfo}`;
+      }).join("\n");
       const content = `${noditServiceDescription}
 ${guideToUseNodit}
 - Available Nodit API Categories:

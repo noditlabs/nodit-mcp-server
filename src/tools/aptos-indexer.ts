@@ -128,16 +128,17 @@ export function registerAptosIndexerTools(server: McpServer) {
     "call_nodit_aptos_indexer_api",
     "Calls a Nodit Aptos Indexer API. Returns the API response. Before making the call, it's recommended to verify the detailed API specifications using the 'get_nodit_aptos_indexer_api_spec' tool. Please note that using this tool will consume your API quota.",
     {
+        network: z.string().describe("Nodit network to call. e.g. 'mainnet' or 'testnet'."),
         requestBody: z.record(z.any()).describe("Graphql request body matching the API's spec."),
     },
-    async ({ requestBody }) => {
+    async ({ network, requestBody }) => {
       const toolName = "call_nodit_aptos_indexer_api";
       const apiKey = process.env.NODIT_API_KEY;
       if (!apiKey) {
         return createErrorResponse(`NODIT_API_KEY environment variable is not set. It is required to call nodit api. Please check your mcp server configuration.`, toolName);
       }
 
-      const apiUrl = `https://aptos-mainnet.nodit.io/v1/graphql`;
+      const apiUrl = `https://aptos-${network}.nodit.io/v1/graphql`;
 
       try {
         const apiOptions = {
