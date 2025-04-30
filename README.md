@@ -2,6 +2,10 @@
 
 A Model Context Protocol (MCP) server that connects AI agents and developers to structured, context-ready blockchain data across multiple networks through Nodit's Web3 infrastructure.
 
+<a href="https://glama.ai/mcp/servers/@noditlabs/nodit-mcp-server">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@noditlabs/nodit-mcp-server/badge" alt="Nodit Server MCP server" />
+</a>
+
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18.0.0-green.svg)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0%2B-blue.svg)](https://www.typescriptlang.org/)
