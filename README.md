@@ -178,11 +178,11 @@ export NODIT_API_KEY=your-api-key
 claude
 ```
 
-### Example Prompts with Nodit MCP
+## Example Prompts with Nodit MCP
 Once Nodit MCP is connected, you can use natural language to directly query blockchain data from multiple networks.
 The examples below illustrate just a few of the many possibilities — feel free to go beyond them and explore your own use cases. 
 
-#### 📊 On-chain Activity Monitoring
+### 📊 On-chain Activity Monitoring
 ```
 Summarize the recent activity of 0xabc…def across Ethereum and Arbitrum. Include major transactions, token transfers, and NFT interactions over the past 7 days.
 ```
@@ -193,7 +193,7 @@ What fungible and non-fungible tokens does this wallet hold across Ethereum and 
 Analyze the risk profile of wallet 0xabc… based on its recent on-chain behavior.
 ```
 
-#### 🧾 Smart Contract & Transaction Analysis
+### 🧾 Smart Contract & Transaction Analysis
 ```
 Analyze how users interacted with the contract at 0xcontract… on Ethereum over the last week.
 ```
@@ -201,7 +201,7 @@ Analyze how users interacted with the contract at 0xcontract… on Ethereum over
 Analyze the last 10 blocks on Arbitrum.
 ```
 
-#### 🧠 AI Agent Use Cases
+### 🧠 AI Agent Use Cases
 ```
 Based on wallet 0xabc…’s holdings, recommend optimal DeFi strategies across Ethereum and Arbitrum.
 ```
@@ -209,7 +209,7 @@ Based on wallet 0xabc…’s holdings, recommend optimal DeFi strategies across 
 Create a daily summary report for 0xdao… including token balances, inflow/outflow, and governance activity.
 ```
 
-#### ⚙️ Web3 DApp Development
+### ⚙️ Web3 DApp Development
 ```
 Write TypeScript code using fetch to retrieve all ERC-20 transfers for 0xabc… from Ethereum using Nodit’s Node API.
 ```
