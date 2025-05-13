@@ -59,7 +59,7 @@ For detailed API specifications and usage guidelines, please refer to the [Nodit
   Query detailed Aptos blockchain activities through GraphQL endpoints.
 
 - **Supported Networks**  
-  - EVM-Compatible: Ethereum, Arbitrum, Avalanche, Base, Kaia, Optimism, Polygon
+  - EVM-Compatible: Ethereum, Arbitrum, Avalanche, Base, Chiliz, Kaia, Optimism, Polygon
   - Non-EVM: Aptos, Bitcoin, Dogecoin, TRON, XRPL
 
 
@@ -178,6 +178,47 @@ export NODIT_API_KEY=your-api-key
 claude
 ```
 
+### Example Prompts with Nodit MCP
+Once Nodit MCP is connected, you can use natural language to directly query blockchain data from multiple networks.
+The examples below illustrate just a few of the many possibilities — feel free to go beyond them and explore your own use cases. 
+
+#### 📊 On-chain Activity Monitoring
+```
+Summarize the recent activity of 0xabc…def across Ethereum and Arbitrum. Include major transactions, token transfers, and NFT interactions over the past 7 days.
+```
+```
+What fungible and non-fungible tokens does this wallet hold across Ethereum and Polygon? Include balances and token names.
+```
+```
+Analyze the risk profile of wallet 0xabc… based on its recent on-chain behavior.
+```
+
+#### 🧾 Smart Contract & Transaction Analysis
+```
+Analyze how users interacted with the contract at 0xcontract… on Ethereum over the last week.
+```
+```
+Analyze the last 10 blocks on Arbitrum.
+```
+
+#### 🧠 AI Agent Use Cases
+```
+Based on wallet 0xabc…’s holdings, recommend optimal DeFi strategies across Ethereum and Arbitrum.
+```
+```
+Create a daily summary report for 0xdao… including token balances, inflow/outflow, and governance activity.
+```
+
+#### ⚙️ Web3 DApp Development
+```
+Write TypeScript code using fetch to retrieve all ERC-20 transfers for 0xabc… from Ethereum using Nodit’s Node API.
+```
+```
+Build a simple dashboard to visualize how assets have moved in recent XRPL transactions.
+```
+```
+Build a dashboard that aggregates blockchain data across multiple chains using Nodit.
+```
 
 ## Scope & Limitations
 
