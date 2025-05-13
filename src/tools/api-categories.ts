@@ -39,6 +39,7 @@ const dataApiNetworks = {
   "arbitrum": ["mainnet", "sepolia"],
   "polygon": ["mainnet", "amoy"],
   "base": ["mainnet", "sepolia"],
+  "chiliz": ["mainnet"],
   "optimism": ["mainnet", "sepolia"],
   "kaia": ["mainnet", "kairos"],
   "luniverse": ["mainnet"],
