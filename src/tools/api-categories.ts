@@ -24,7 +24,7 @@ const guideToUseNodit = `Please keep these rules in mind when using nodit tools:
 `;
 
 const nodeApiNetworks = {
-  "ethereum": ["mainnet", "sepolia", "holesky"],
+  "ethereum": ["mainnet", "sepolia", "hoodi"],
   "avalanche": ["mainnet", "fuji"],
   "arbitrum": ["mainnet", "sepolia"],
   "polygon": ["mainnet", "amoy"],
@@ -35,7 +35,7 @@ const nodeApiNetworks = {
 }
 
 const dataApiNetworks = {
-  "ethereum": ["mainnet", "sepolia", "holesky"],
+  "ethereum": ["mainnet", "sepolia", "hoodi"],
   "arbitrum": ["mainnet", "sepolia"],
   "polygon": ["mainnet", "amoy"],
   "base": ["mainnet", "sepolia"],
