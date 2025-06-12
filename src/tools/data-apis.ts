@@ -4,7 +4,7 @@ import {
   normalizeDescription,
   loadNoditDataApiSpec,
   NoditOpenApiSpecType
-} from "../nodit-apidoc-helper.js";
+} from "../helper/nodit-apidoc-helper.js";
 
 export function registerDataApiTools(server: McpServer) {
   const noditDataApiSpec: NoditOpenApiSpecType = loadNoditDataApiSpec();

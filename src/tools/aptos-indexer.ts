@@ -7,7 +7,12 @@ import {
   AptosIndexerApiSpec,
   Relationship,
   GraphQLSpec
-} from "../nodit-apidoc-helper.js";
+} from "../helper/nodit-apidoc-helper.js";
+import {
+  createTimeoutSignal
+} from "../helper/call-api-helper.js";
+
+const TIMEOUT_MS = 60_000;
 
 export function registerAptosIndexerTools(server: McpServer) {
   const noditAptosIndexerApiSpec: AptosIndexerApiSpec = loadNoditAptosIndexerApiSpec();
@@ -139,17 +144,19 @@ export function registerAptosIndexerTools(server: McpServer) {
       }
 
       const apiUrl = `https://aptos-${network}.nodit.io/v1/graphql`;
+      const { signal, cleanup } = createTimeoutSignal(TIMEOUT_MS);
 
       try {
-        const apiOptions = {
+        const apiOptions: RequestInit = {
           method: 'POST',
           headers: {
             'X-API-KEY': apiKey,
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            'User-Agent': 'nodit-mcp-server'
+            'User-Agent': 'nodit-mcp-server',
           },
           body: JSON.stringify(requestBody),
+          signal,
         };
 
         log(`Calling Aptos Indexer GraphQL API: ${apiUrl}, apiOptions: ${JSON.stringify(apiOptions, null, 2)}`);
@@ -188,7 +195,13 @@ export function registerAptosIndexerTools(server: McpServer) {
         }
 
       } catch (error) {
-        return createErrorResponse(`Network/fetch error calling API: ${(error as Error).message}`, toolName);
+        let message = (error as Error).message;
+        if (error instanceof Error && error.name === 'AbortError') {
+          message = `The request took longer than expected and has been terminated. This may be due to high server load or because the requested data is taking longer to process. Please try again later.`;
+        }
+        return createErrorResponse(`Network/fetch error calling API: ${message}`, toolName);
+      } finally {
+        cleanup()
       }
     }
   );

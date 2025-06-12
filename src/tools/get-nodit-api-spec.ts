@@ -9,7 +9,7 @@ import {
   loadNoditNodeApiSpecMap,
   loadNoditDataApiSpec,
   NoditOpenApiSpecType
-} from "../nodit-apidoc-helper.js";
+} from "../helper/nodit-apidoc-helper.js";
 
 export function registerGetNoditApiSpecTool(server: McpServer) {
   const noditNodeApiSpecMap: Map<string, NoditOpenApiSpecType> = loadNoditNodeApiSpecMap();

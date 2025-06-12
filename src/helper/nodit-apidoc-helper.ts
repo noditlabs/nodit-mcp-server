@@ -38,13 +38,13 @@ export function log(message: string, ...args: any[]) {
 }
 
 export function loadNoditDataApiSpec(): NoditOpenApiSpecType {
-  const specPath = path.resolve(__dirname, './spec/reference/web3-data-api.yaml');
+  const specPath = path.resolve(__dirname, '../spec/reference/web3-data-api.yaml');
   return loadOpenapiSpecFile(specPath) as NoditOpenApiSpecType;
 }
 
 export function loadNoditNodeApiSpecMap(): Map<string, NoditOpenApiSpecType> {
   const noditApiSpecMap = new Map<string, NoditOpenApiSpecType>();
-  const specDir = path.resolve(__dirname, './spec/reference');
+  const specDir = path.resolve(__dirname, '../spec/reference');
 
   try {
     const files = fs.readdirSync(specDir);
@@ -131,7 +131,7 @@ export interface AptosIndexerApiSpec {
 }
 
 export function loadNoditAptosIndexerApiSpec(): AptosIndexerApiSpec {
-  const schemaPath = path.resolve(__dirname, './nodit-aptos-indexer-api-schema.json');
+  const schemaPath = path.resolve(__dirname, '../nodit-aptos-indexer-api-schema.json');
   return loadOpenapiSpecFile(schemaPath) as AptosIndexerApiSpec;
 }
 

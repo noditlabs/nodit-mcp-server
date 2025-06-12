@@ -4,7 +4,7 @@ import {
   loadNoditDataApiSpec, 
   loadNoditNodeApiSpecMap,
   NoditOpenApiSpecType
-} from "../nodit-apidoc-helper.js";
+} from "../helper/nodit-apidoc-helper.js";
 
 const noditServiceDescription = `Nodit Blockchain Context is a service that provides stable node operation agency to support easy WEB3 development and refined blockchain data.`;
 const guideToUseNodit = `Please keep these rules in mind when using nodit tools:

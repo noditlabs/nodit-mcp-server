@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { log } from "./nodit-apidoc-helper.js";
+import { log } from "./helper/nodit-apidoc-helper.js";
 import { registerAllTools } from "./tools/index.js";
 
 async function main() {

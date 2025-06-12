@@ -3,7 +3,7 @@ import {
   createErrorResponse,
   loadNoditNodeApiSpecMap,
   NoditOpenApiSpecType
-} from "../nodit-apidoc-helper.js";
+} from "../helper/nodit-apidoc-helper.js";
 
 export function registerNodeApiTools(server: McpServer) {
   const noditNodeApiSpecMap: Map<string, NoditOpenApiSpecType> = loadNoditNodeApiSpecMap();
