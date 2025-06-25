@@ -178,6 +178,81 @@ export NODIT_API_KEY=your-api-key
 claude
 ```
 
+## Troubleshooting
+### Trouble running MCP via npx on Claude Desktop
+If you are running the MCP server in combination with **Claude Desktop** or other tools that rely on a local Node.js installation, you may encounter issues due to:
+* Multiple versions of Node.js installed (e.g., via Homebrew and package installer)
+* Conflicting PATH environments
+* Claude Desktop not recognizing the correct Node.js runtime
+
+Follow the steps below to verify that **Node.js 18+** is properly installed and recognized on your system.
+
+#### 1. Check your currently active Node.js version
+Run the following command in your terminal to check the version:
+```
+node --version
+```
+You should see a version number starting with v18 or higher (e.g., v18.19.0).
+
+If not, you may need to install a compatible version or switch to it.
+
+> [!TIP] 
+> Claude Desktop may not use the same Node.js version as your terminal. If you have multiple installations (e.g., via Homebrew, nvm, or direct installer), it may default to an unexpected version.
+> To list all common installation paths:
+> ```
+> # Homebrew installation
+> ls /usr/local/bin/node
+> ls /opt/homebrew/bin/node
+> 
+> # nvm installations
+> ls ~/.nvm/versions/node/
+> 
+> # System installation
+> ls /usr/bin/node
+> ```
+
+#### 2. Install or switch to Node.js 18+ if needed
+If you don’t have a compatible version, install Node.js using one of the following methods:
+
+* Using Node.js official installer: Download from nodejs.org
+* Using Homebrew (macOS):
+```  
+bashbrew install node@20
+```
+* Using nvm (recommended for version management):
+```
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+nvm install 20
+nvm use 20
+nvm alias default 20
+```
+
+#### 3. Check which Node.js version Claude Desktop uses
+Claude Desktop inherits the PATH from your system environment.
+In your terminal, run:
+```
+which node
+```
+This displays the path of the Node.js binary currently active in your terminal. This is the path that Claude is likely to use when launched from that terminal.
+
+#### 4. Force Claude Desktop to use the correct Node.js version
+* If you’re using nvm:
+```
+nvm use 18  # Set proper version 
+nvm alias default 18
+```
+
+* If you’re using Homebrew, ensure it’s prioritized in your PATH:
+```
+export PATH="/opt/homebrew/bin:$PATH"  # for Apple Silicon
+# or
+export PATH="/usr/local/bin:$PATH"     # for Intel Macs
+```
+We recommend sticking to a single installation method (e.g., either nvm or Homebrew) to avoid version conflicts.
+
+#### 5. Restart Claude Desktop
+After making changes, restart Claude Desktop to ensure it picks up the correct environment variables and Node.js version.
+
 ## Example Prompts with Nodit MCP
 Once Nodit MCP is connected, you can use natural language to directly query blockchain data from multiple networks.
 The examples below illustrate just a few of the many possibilities — feel free to go beyond them and explore your own use cases. 
