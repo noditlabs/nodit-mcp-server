@@ -17,9 +17,10 @@ Nodit MCP Server simplifies how AI models and applications interact with blockch
 Instead of handling complex node RPCs, raw event logs, or chain-specific data structures, developers can access normalized, multi-chain blockchain data in a format optimized for AI reasoning and decision-making.
 
 With Nodit's MCP, you can:
-- Build AI agents that query, analyze, and act on real-time blockchain data across EVM-compatible and non-EVM networks.
-- Create Web3-integrated applications without requiring specialized blockchain development expertise.
-- Leverage Nodit's reliable node infrastructure, Web3 Data APIs, and GraphQL indexing services through a unified access layer.
+- Build AI agents that **query, analyze, and act on real-time blockchain data** across EVM-compatible and non-EVM networks.
+- **Develope Web3-integrated applications** without requiring specialized blockchain development expertise.
+- Leverage Nodit's **reliable node infrastructure, Web3 Data APIs, and GraphQL indexing services** through a unified access layer.
+- Easily develop with blockchain MCP in **both local and remote integration**, depending on your workflow needs.
 
 Supported networks include Ethereum, Base, Optimism, Arbitrum, Polygon, Aptos, Bitcoin, Dogecoin, TRON, XRPL, and more.
 
@@ -30,10 +31,10 @@ Nodit MCP Server provides tools enabling AI agents to dynamically discover, unde
 - **List API Categories (`list_nodit_api_categories`)**  
   Retrieve a list of high-level API categories available.
 
-- **List API Operations (`list_nodit_node_apis`, `list_nodit_data_apis`, `list_nodit_aptos_indexer_api_query_root`)**  
-  Fetch available operations within a selected category (Node APIs, Data APIs, Aptos Indexer APIs).
+- **List API Operations (`list_nodit_node_apis`, `list_nodit_data_apis`, `list_nodit_aptos_indexer_api_query_root`,`list_nodit_webhook_apis`)**  
+  Fetch available operations within a selected category (Node APIs, Data APIs, Aptos Indexer APIs, Webhook APIs).
 
-- **Get API Specification (`get_nodit_api_spec`)**  
+- **Get API Specification (`get_nodit_api_spec`,`get_nodit_aptos_indexer_api_spec`)**  
   Obtain detailed information for a specific API operation (parameters, request/response schema).
 
 - **Call API (`call_nodit_api`,`call_nodit_aptos_indexer_api`)**  
@@ -130,8 +131,6 @@ echo '{"method":"tools/list","params":{},"jsonrpc":"2.0","id":1}' | node build/i
 echo '{"method":"tools/call","params":{"name":"list_nodit_api_categories","arguments":{}},"jsonrpc":"2.0","id":1}' | node build/index.js
 ```
 
-## Integration 
-
 ### Connecting to Cursor IDE or Claude Desktop
 
 Add the following configuration to your `.cursor/mcp.json` or `claude_desktop_config.json`:
@@ -177,6 +176,46 @@ export NODIT_API_KEY=your-api-key
 # Start Claude with the Nodit MCP server enabled
 claude
 ```
+## Integrating Nodit Remote MCP Server
+If you’re using an AI tool that supports Remote MCP integration, you can connect to Nodit’s Remote MCP Server without running a local MCP server.
+This allows you to use Nodit MCP features directly within your AI environment.
+
+### Endpoint
+Use the following endpoint to connect to the Nodit Remote MCP Server. Make sure to replace INSERT_YOUR_API_KEY with your actual Nodit API Key.
+
+```bash
+https://mcp.nodit.io/sse?apiKey=INSERT_YOUR_API_KEY
+```
+
+### Connecting to Claude (Web)
+If you’re on the Claude Enterprise, Pro, or Max plan, you can integrate the Remote MCP Server. 
+
+1. Go to Settings > Integrations, click the [Add custom integration] button.
+2. Click the [Add more] button to integrate the new Remote MCP.
+3. Insert the endpoint provided above to complete the setup.
+
+Once the integration is complete, you’ll see that Nodit MCP has been added under the Search and Tools section on the Claude main screen.
+
+### Connecting to Cursor IDE
+To connect Nodit MCP to Cursor IDE:
+	1.	Open Preferences > Cursor Settings > MCP Tools.
+	2.	Click [+ New MCP Server] to open the mcp.json configuration file.
+
+You can also open and edit the mcp.json file directly at the following path:
+  - MacOS: `~/.cursor/mcp.json`
+  - Windows: `C:\Users\<Username>\.cursor\mcp.json`
+
+Add the following configuration to the mcpServers object. If you already have other MCP servers configured, separate each entry with a comma.
+```json
+{
+  "mcpServers": {
+    "nodit": {
+      "url": "https://mcp.nodit.io/sse?apiKey=INSERT_YOUR_API_KEY"
+    }
+  }
+}
+```
+Once added, go back to MCP Tools in the Cursor interface and enable the nodit MCP by toggling it on. When the status shows “9 tools enabled” in green, the connection is complete.
 
 ## Troubleshooting
 ### Trouble running MCP via npx on Claude Desktop
