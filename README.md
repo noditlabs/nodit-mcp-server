@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/noditlabs-nodit-mcp-server-badge.png)](https://mseep.ai/app/noditlabs-nodit-mcp-server)
+
 # Nodit MCP Server
 
 A Model Context Protocol (MCP) server that connects AI agents and developers to structured, context-ready blockchain data across multiple networks through Nodit's Web3 infrastructure.
