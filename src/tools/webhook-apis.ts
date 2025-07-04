@@ -26,8 +26,8 @@ export function registerWebhookApiTools(server: McpServer) {
             .map(api => `  - operationId: ${api.operationId}, supported protocols: [${api.protocols.join(',')}], description: ${api.description}`)
             .join("\n");
 
-        const content = `Nodit Blockchain Context data api has endpoints with patterns like https://web3.nodit.io/v1/{protocol}/{network}/getBlockByHashOrNumber. For example, Ethereum mainnet uses an endpoint like https://web3.nodit.io/v1/ethereum/mainnet/getBlockByHashOrNumber.
-The API list is as follows. You can use the get_nodit_api_spec tool to get more detailed API specifications.
+        const content = `Nodit Blockchain Context Webhook api has endpoints with patterns like https://web3.nodit.io/v1/{protocol}/{network}/webhooks. For example, Ethereum mainnet uses an endpoint like https://web3.nodit.io/v1/ethereum/mainnet/webhooks.
+The API list is as follows. You can use the get_nodit_api_spec tool to get more detailed API specifications. However, the API cannot be invoked using the call_nodit_api tool.
 - baseUrl: ${noditWebhookApiSpec.servers[0].url}
 - Available Nodit API Operations:
 ${formattedList}
