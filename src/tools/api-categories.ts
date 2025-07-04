@@ -1,8 +1,9 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { 
-  createErrorResponse, 
-  loadNoditDataApiSpec, 
+import {
+  createErrorResponse,
+  loadNoditDataApiSpec,
   loadNoditNodeApiSpecMap,
+  loadNoditWebhookApiSpec,
   NoditOpenApiSpecType
 } from "../helper/nodit-apidoc-helper.js";
 
@@ -53,9 +54,20 @@ const aptosApiNetworks = {
   "aptos": ["mainnet", "testnet"]
 }
 
+const webhookApiNetworks = {
+  "aptos": ["mainnet", "testnet"],
+  "ethereum": ["mainnet", "sepolia", "hoodi"],
+  "arbitrum": ["mainnet", "sepolia"],
+  "polygon": ["mainnet", "amoy"],
+  "base": ["mainnet", "sepolia"],
+  "optimism": ["mainnet", "sepolia"],
+  "kaia": ["mainnet", "kairos"],
+}
+
 export function registerApiCategoriesTools(server: McpServer) {
   const noditDataApiSpec: NoditOpenApiSpecType = loadNoditDataApiSpec();
   const noditNodeApiSpecMap: Map<string, NoditOpenApiSpecType> = loadNoditNodeApiSpecMap();
+  const noditWebhookApiSpec: NoditOpenApiSpecType = loadNoditWebhookApiSpec()
 
   const dataApiProtocols = new Set<string>();
   Object.values(noditDataApiSpec.paths).forEach(pathItem => {
@@ -74,6 +86,18 @@ export function registerApiCategoriesTools(server: McpServer) {
     if (operationId.includes('-')) {
       const protocol = operationId.split('-')[0];
       nodeApiProtocols.add(protocol);
+    }
+  });
+
+  const webhookApiProtocols = new Set<string>();
+  webhookApiProtocols.add('aptos');
+  Object.values(noditWebhookApiSpec.paths).forEach(pathItem => {
+    if (pathItem?.post?.parameters) {
+      const protocolParam = pathItem.post.parameters.find((param: any) => param.name === 'protocol');
+
+      if (protocolParam?.schema?.enum) {
+        protocolParam.schema.enum.forEach((protocol: string) => webhookApiProtocols.add(protocol));
+      }
     }
   });
 
@@ -96,6 +120,11 @@ export function registerApiCategoriesTools(server: McpServer) {
           description: "Nodit Blockchain Context provides a GraphQL API for accessing indexed data from the Aptos blockchain. This API allows you to query various blockchain data such as coin activities, token activities, and more without having to set up and maintain your own indexer.",
           supportedProtocols: ["aptos"]
         },
+        {
+          name: "Nodit Webhook API",
+          description: "Nodit Webhook is a development tool that helps you implement responsive applications for real-time events by sending event occurrence information to the URL registered in the Webhook when a defined on-chain event occurs. You can receive information in real time when important events occur, such as a new transaction occurring on the blockchain or a change in the smart contract status.",
+          supportedProtocols: Array.from(webhookApiProtocols).sort()
+        },
       ];
       const formattedList = categories.map(category => {
         let networkInfo = '';
@@ -107,6 +136,8 @@ export function registerApiCategoriesTools(server: McpServer) {
           networkMap = dataApiNetworks;
         } else if (category.name === "Nodit Aptos Indexer API") {
           networkMap = aptosApiNetworks;
+        } else if (category.name === "Nodit Webhook API") {
+          networkMap = webhookApiNetworks;
         }
 
         if (networkMap) {

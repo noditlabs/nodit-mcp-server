@@ -9,7 +9,8 @@ import {
   log,
   loadNoditNodeApiSpecMap,
   loadNoditDataApiSpec,
-  NoditOpenApiSpecType
+  NoditOpenApiSpecType,
+  isWebhookApi
 } from "../helper/nodit-apidoc-helper.js";
 import {
   createTimeoutSignal
@@ -33,6 +34,13 @@ export function registerCallNoditApiTool(server: McpServer) {
     async ({ protocol, network, operationId, requestBody }) => {
       const toolName = "call_nodit_api";
 
+      if (isWebhookApi(operationId)) {
+        return createErrorResponse(
+            `The Nodit Webhook APIs cannot be invoked via "${toolName}".`,
+            toolName,
+        )
+      }
+
       const apiKey = process.env.NODIT_API_KEY;
       if (!apiKey) {
           return createErrorResponse(`NODIT_API_KEY environment variable is not set. It is required to call nodit api. Please check your tool configuration.`, toolName);
@@ -54,7 +62,7 @@ export function registerCallNoditApiTool(server: McpServer) {
           const apiUrlTemplate = findNoditNodeApiSpec(operationId, noditNodeApiSpecMap)!.servers[0].url
           apiUrl = apiUrlTemplate.replace(`{${protocol}-network}`, `${protocol}-${network}`)
       } else {
-          const noditDataApiPath = Object.entries(noditDataApiSpec.paths).find(([, spec]) => spec.post.operationId === operationId)
+          const noditDataApiPath = Object.entries(noditDataApiSpec.paths).find(([, spec]) => spec.post?.operationId === operationId)
           if (!noditDataApiPath) {
               return createErrorResponse(`Invalid operationId '${operationId}'. No API URL found for operationId '${operationId}'.`, toolName);
           }
