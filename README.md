@@ -24,6 +24,17 @@ With Nodit's MCP, you can:
 
 Supported networks include Ethereum, Base, Optimism, Arbitrum, Polygon, Aptos, Bitcoin, Dogecoin, TRON, XRPL, and more.
 
+## Table of Contents
+- [How Nodit MCP Tools Work](#how-nodit-mcp-tools-work)
+- [Features](#features)
+- [Prerequisites](#prerequisites)
+- [Running Local Nodit MCP Server](#running-local-nodit-mcp-server)
+- [Integrating Nodit Remote MCP Server](#integrating-nodit-remote-mcp-server)
+- [Troubleshooting](#troubleshooting)
+- [Example Prompts with Nodit MCP](#example-prompts-with-nodit-mcp)
+- [Scope & Limitations](#scope--limitations)
+- [License](#license)
+
 ## How Nodit MCP Tools Work
 
 Nodit MCP Server provides tools enabling AI agents to dynamically discover, understand, and interact with Nodit's Web3 APIs and data infrastructure. The tools minimize token consumption and maintain a lightweight context by modularizing API interactions into distinct steps:
