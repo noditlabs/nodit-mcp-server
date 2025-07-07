@@ -1,19 +1,23 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import {
-  createErrorResponse,
-  findNoditDataApiDetails,
-  isNodeApi,
-  findNoditNodeApiDetails,
-  log,
-  loadNoditNodeApiSpecMap,
-  loadNoditDataApiSpec,
-  NoditOpenApiSpecType
+    createErrorResponse,
+    findNoditDataApiDetails,
+    isNodeApi,
+    findNoditNodeApiDetails,
+    findNoditWebhookApiDetails,
+    log,
+    loadNoditNodeApiSpecMap,
+    loadNoditDataApiSpec,
+    NoditOpenApiSpecType,
+    isWebhookApi,
+    loadNoditWebhookApiSpec
 } from "../helper/nodit-apidoc-helper.js";
 
 export function registerGetNoditApiSpecTool(server: McpServer) {
   const noditNodeApiSpecMap: Map<string, NoditOpenApiSpecType> = loadNoditNodeApiSpecMap();
   const noditDataApiSpec: NoditOpenApiSpecType = loadNoditDataApiSpec();
+  const noditWebhookApiSpec: NoditOpenApiSpecType = loadNoditWebhookApiSpec();
 
   server.tool(
     "get_nodit_api_spec",
@@ -23,8 +27,18 @@ export function registerGetNoditApiSpecTool(server: McpServer) {
       const toolName = "get_nodit_api_spec";
       log(`Tool (${toolName}): Request for operationId: ${operationId}`);
 
-      const isNodeApiCall = isNodeApi(operationId);
-      const apiInfo = isNodeApiCall ? findNoditNodeApiDetails(operationId, noditNodeApiSpecMap) : findNoditDataApiDetails(operationId, noditDataApiSpec);
+      let apiInfo;
+        if (isNodeApi(operationId)) {
+            apiInfo = findNoditNodeApiDetails(operationId, noditNodeApiSpecMap);
+        } else if (isWebhookApi(operationId)) {
+            const postfix = "\nThis API cannot be invoked using the call_nodit_api tool."
+            apiInfo = findNoditWebhookApiDetails(operationId, noditWebhookApiSpec);
+            if (apiInfo && !apiInfo.details.description?.endsWith(postfix)) {
+                apiInfo.details.description = apiInfo.details.description + postfix;
+            }
+        } else {
+            apiInfo = findNoditDataApiDetails(operationId, noditDataApiSpec);
+        }
       if (!apiInfo) {
         return createErrorResponse(`Spec for operationId '${operationId}' not found.`, toolName);
       }
@@ -32,6 +46,7 @@ export function registerGetNoditApiSpecTool(server: McpServer) {
       const finalSpecDetails = {
         operationId: operationId,
         path: apiInfo.path,
+        method: apiInfo.method,
         details: apiInfo.details,
       };
 

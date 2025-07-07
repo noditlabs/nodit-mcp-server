@@ -21,7 +21,11 @@ export interface OpenApiOperation {
 }
 
 export interface OpenApiPathItem {
-  post: OpenApiOperation;
+  post?: OpenApiOperation;
+  get?: OpenApiOperation;
+  put?: OpenApiOperation;
+  patch?: OpenApiOperation;
+  delete?: OpenApiOperation;
 }
 
 export interface NoditOpenApiSpecType {
@@ -39,6 +43,11 @@ export function log(message: string, ...args: any[]) {
 
 export function loadNoditDataApiSpec(): NoditOpenApiSpecType {
   const specPath = path.resolve(__dirname, '../spec/reference/web3-data-api.yaml');
+  return loadOpenapiSpecFile(specPath) as NoditOpenApiSpecType;
+}
+
+export function loadNoditWebhookApiSpec(): NoditOpenApiSpecType {
+  const specPath = path.resolve(__dirname, '../spec/reference/webhook.yaml');
   return loadOpenapiSpecFile(specPath) as NoditOpenApiSpecType;
 }
 
@@ -143,6 +152,10 @@ export function isEthereumNodeApi(operationId: string): boolean {
   return !operationId.includes("-")
 }
 
+export function isWebhookApi(operationId: string): boolean {
+    return operationId.includes("Webhook");
+}
+
 export function findNoditNodeApiSpec(operationId: string, noditNodeApiSpecMap: Map<string, NoditOpenApiSpecType>): NoditOpenApiSpecType | undefined {
   let key = operationId;
   if (isEthereumNodeApi(operationId)) {
@@ -205,15 +218,43 @@ export function findNoditNodeApiDetails(operationId: string, specMap: Map<string
 } | null {
   const spec = findNoditNodeApiSpec(operationId, specMap);
 
-  if (!spec) {
-    return null;
+  if (spec && spec.paths['/']?.post) {
+    return {
+      path: '/',
+      method: 'post',
+      details: spec.paths['/']?.post
+    }
   }
 
-  return {
-    path: '/',
-    method: 'post',
-    details: spec.paths['/']?.post
+  return null;
+}
+
+export function findNoditWebhookApiDetails(operationId: string, spec: NoditOpenApiSpecType): {
+  path: string;
+  method: string;
+  details: OpenApiOperation
+} | null {
+  for (const [path, pathItem] of Object.entries(spec.paths)) {
+    const methods: Array<{ method: string; operation?: OpenApiOperation }> = [
+      { method: 'get', operation: pathItem.get },
+      { method: 'post', operation: pathItem.post },
+      { method: 'put', operation: pathItem.put },
+      { method: 'patch', operation: pathItem.patch },
+      { method: 'delete', operation: pathItem.delete }
+    ];
+
+    for (const { method, operation } of methods) {
+      if (operation?.operationId === operationId) {
+        return {
+          path,
+          method,
+          details: operation
+        };
+      }
+    }
   }
+  
+  return null;
 }
 
 export function createErrorResponse(message: string, toolName: string): { content: { type: "text"; text: string }[] } {
