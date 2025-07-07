@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {createErrorResponse, loadNoditWebhookApiSpec, NoditOpenApiSpecType} from "../helper/nodit-apidoc-helper.js";
 
 export function registerWebhookApiTools(server: McpServer) {
-    const toolName = "list_webhook_data_apis";
+    const toolName = "list_nodit_webhook_apis";
     const noditWebhookApiSpec: NoditOpenApiSpecType = loadNoditWebhookApiSpec()
 
     const apis = Object.values(noditWebhookApiSpec.paths).flatMap((pathItem) => {
