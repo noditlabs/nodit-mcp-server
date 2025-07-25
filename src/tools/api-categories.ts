@@ -48,6 +48,7 @@ const dataApiNetworks = {
   "dogecoin": ["mainnet"],
   "tron": ["mainnet"],
   "xrpl": ["mainnet"],
+  "aptos": ["mainnet"],
 }
 
 const aptosApiNetworks = {
