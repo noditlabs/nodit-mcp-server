@@ -32,7 +32,8 @@ const nodeApiNetworks = {
   "base": ["mainnet", "sepolia"],
   "optimism": ["mainnet", "sepolia"],
   "kaia": ["mainnet", "kairos"],
-  "luniverse": ["mainnet"]
+  "luniverse": ["mainnet"],
+  "sui": ["mainnet"],
 }
 
 const dataApiNetworks = {

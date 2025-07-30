@@ -82,11 +82,41 @@ export function loadNoditNodeApiSpecMap(): Map<string, NoditOpenApiSpecType> {
       }
     }
 
+    const suiNodeApiSpecDir = path.resolve(__dirname, '../spec/reference/sui-node-api');
+    const suiNodeApiSpecFiles = fs.readdirSync(suiNodeApiSpecDir);
+    for (const file of suiNodeApiSpecFiles) {
+      if (file.endsWith('.yaml')) {
+        const filePath = path.join(suiNodeApiSpecDir, file);
+        const suiNodeApiSpecMap = loadMultiPathApiSpec(filePath);
+        suiNodeApiSpecMap.forEach((spec, operationId) => {
+          noditApiSpecMap.set(operationId, spec);
+        });
+      }
+    }
+
     return noditApiSpecMap;
   } catch (error) {
     log('Error reading spec directory:', error);
     return new Map();
   }
+}
+
+function loadMultiPathApiSpec(filePath: string): Map<string, NoditOpenApiSpecType> {
+  const specMap = new Map<string, NoditOpenApiSpecType>();
+
+  try {
+    const spec = loadOpenapiSpecFile(filePath) as NoditOpenApiSpecType;
+    const operationId = spec.paths['/']!.post!.operationId;
+    if (operationId) {
+      specMap.set(operationId, spec);
+    } else {
+      log(`Could not extract operationId from spec file ${filePath}`);
+    }
+  } catch (error) {
+    log(`Error loading spec file ${filePath}:`, error);
+  }
+
+  return specMap
 }
 
 export interface Relationship {
