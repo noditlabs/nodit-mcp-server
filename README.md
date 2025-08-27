@@ -71,8 +71,8 @@ For detailed API specifications and usage guidelines, please refer to the [Nodit
   Query detailed Aptos blockchain activities through GraphQL endpoints.
 
 - **Supported Networks**  
-  - EVM-Compatible: Ethereum, Arbitrum, Avalanche, Base, Chiliz, Kaia, Optimism, Polygon
-  - Non-EVM: Aptos, Bitcoin, Dogecoin, TRON, XRPL
+  - EVM-Compatible: Ethereum, Arbitrum, Avalanche, Base, Chiliz, Kaia, Optimism, Polygon, BNB Chain
+  - Non-EVM: Aptos, Bitcoin, Dogecoin, TRON, XRPL, Sui
 
 
 ## Prerequisites
