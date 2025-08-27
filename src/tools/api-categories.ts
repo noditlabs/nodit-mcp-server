@@ -34,6 +34,7 @@ const nodeApiNetworks = {
   "kaia": ["mainnet", "kairos"],
   "luniverse": ["mainnet"],
   "sui": ["mainnet"],
+  "bnb": ["mainnet", "testnet"],
 }
 
 const dataApiNetworks = {
