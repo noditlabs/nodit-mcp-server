@@ -35,6 +35,7 @@ const nodeApiNetworks = {
   "luniverse": ["mainnet"],
   "sui": ["mainnet"],
   "bnb": ["mainnet", "testnet"],
+  "giwa": ["sepolia"],
 }
 
 const dataApiNetworks = {
@@ -51,6 +52,7 @@ const dataApiNetworks = {
   "tron": ["mainnet"],
   "xrpl": ["mainnet"],
   "aptos": ["mainnet"],
+  "giwa": ["sepolia"],
 }
 
 const aptosApiNetworks = {
@@ -65,6 +67,7 @@ const webhookApiNetworks = {
   "base": ["mainnet", "sepolia"],
   "optimism": ["mainnet", "sepolia"],
   "kaia": ["mainnet", "kairos"],
+  "giwa": ["sepolia"],
 }
 
 export function registerApiCategoriesTools(server: McpServer) {
