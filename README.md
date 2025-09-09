@@ -22,7 +22,7 @@ With Nodit's MCP, you can:
 - Leverage Nodit's **reliable node infrastructure, Web3 Data APIs, and GraphQL indexing services** through a unified access layer.
 - Easily develop with blockchain MCP in **both local and remote integration**, depending on your workflow needs.
 
-Supported networks include Ethereum, Base, Optimism, Arbitrum, Polygon, Aptos, Bitcoin, Dogecoin, TRON, XRPL, and more.
+Supported networks include Ethereum, Base, Optimism, Arbitrum, Polygon, Aptos, Bitcoin, Dogecoin, TRON, XRPL, GIWA(Sepolia) and more.
 
 ## Table of Contents
 - [How Nodit MCP Tools Work](#how-nodit-mcp-tools-work)
@@ -71,7 +71,7 @@ For detailed API specifications and usage guidelines, please refer to the [Nodit
   Query detailed Aptos blockchain activities through GraphQL endpoints.
 
 - **Supported Networks**  
-  - EVM-Compatible: Ethereum, Arbitrum, Avalanche, Base, Chiliz, Kaia, Optimism, Polygon, BNB Chain
+  - EVM-Compatible: Ethereum, Arbitrum, Avalanche, Base, Chiliz, Kaia, Optimism, Polygon, BNB Chain, GIWA(Sepolia)
   - Non-EVM: Aptos, Bitcoin, Dogecoin, TRON, XRPL, Sui
 
 
