@@ -10,7 +10,7 @@ import {
   loadNoditNodeApiSpecMap,
   loadNoditDataApiSpec,
   NoditOpenApiSpecType,
-  isWebhookApi
+  isWebhookApi, isBlockedOperationId
 } from "../helper/nodit-apidoc-helper.js";
 import {
   createTimeoutSignal
@@ -37,6 +37,13 @@ export function registerCallNoditApiTool(server: McpServer) {
       if (isWebhookApi(operationId)) {
         return createErrorResponse(
             `The Nodit Webhook APIs cannot be invoked via "${toolName}".`,
+            toolName,
+        )
+      }
+
+      if (isBlockedOperationId(operationId)) {
+        return createErrorResponse(
+            `The operationId(${operationId}) cannot be invoked via "${toolName}".`,
             toolName,
         )
       }

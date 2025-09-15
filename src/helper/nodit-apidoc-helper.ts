@@ -37,6 +37,21 @@ export interface NoditOpenApiSpecType {
   security: any[];
 }
 
+export const BLOCKED_OPERATION_IDS = new Set([
+  "solana-getProgramAccounts",
+  "solana-getClusterNodes",
+  "solana-getLeaderSchedule",
+  "solana-getSignaturesForAddress",
+  "solana-getBlock",
+  "solana-getBlocks",
+  "solana-getBlocksWithLimit",
+  "solana-getVoteAccounts",
+  "solana-getInflationGovernor",
+  "solana-getInflationRate",
+  "solana-getInflationReward",
+  "solana-getSupply",
+]);
+
 export function log(message: string, ...args: any[]) {
   console.error(message, ...args);
 }
@@ -89,6 +104,18 @@ export function loadNoditNodeApiSpecMap(): Map<string, NoditOpenApiSpecType> {
         const filePath = path.join(suiNodeApiSpecDir, file);
         const suiNodeApiSpecMap = loadMultiPathApiSpec(filePath);
         suiNodeApiSpecMap.forEach((spec, operationId) => {
+          noditApiSpecMap.set(operationId, spec);
+        });
+      }
+    }
+
+    const solanaNodeApiSpecDir = path.resolve(__dirname, '../spec/reference/solana-node-api/http-methods');
+    const solanaNodeApiSpecFiles = fs.readdirSync(solanaNodeApiSpecDir);
+    for (const file of solanaNodeApiSpecFiles) {
+      if (file.endsWith('.yaml')) {
+        const filePath = path.join(solanaNodeApiSpecDir, file);
+        const solanaNodeApiSpecMap = loadMultiPathApiSpec(filePath);
+        solanaNodeApiSpecMap.forEach((spec, operationId) => {
           noditApiSpecMap.set(operationId, spec);
         });
       }
@@ -175,7 +202,7 @@ export function loadNoditAptosIndexerApiSpec(): AptosIndexerApiSpec {
 }
 
 export function isNodeApi(operationId: string): boolean {
-  return operationId.includes("_");
+  return operationId.includes("_") || operationId.startsWith("solana-");
 }
 
 export function isEthereumNodeApi(operationId: string): boolean {
@@ -183,7 +210,11 @@ export function isEthereumNodeApi(operationId: string): boolean {
 }
 
 export function isWebhookApi(operationId: string): boolean {
-    return operationId.includes("Webhook");
+  return operationId.includes("Webhook");
+}
+
+export function isBlockedOperationId(operationId: string): boolean {
+  return BLOCKED_OPERATION_IDS.has(operationId);
 }
 
 export function findNoditNodeApiSpec(operationId: string, noditNodeApiSpecMap: Map<string, NoditOpenApiSpecType>): NoditOpenApiSpecType | undefined {

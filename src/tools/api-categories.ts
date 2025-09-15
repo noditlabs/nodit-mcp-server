@@ -36,6 +36,7 @@ const nodeApiNetworks = {
   "sui": ["mainnet"],
   "bnb": ["mainnet", "testnet"],
   "giwa": ["sepolia"],
+  "solana": ["mainnet", "devnet"],
 }
 
 const dataApiNetworks = {
