@@ -72,7 +72,7 @@ For detailed API specifications and usage guidelines, please refer to the [Nodit
 
 - **Supported Networks**  
   - EVM-Compatible: Ethereum, Arbitrum, Avalanche, Base, Chiliz, Kaia, Optimism, Polygon, BNB Chain, GIWA(Sepolia)
-  - Non-EVM: Aptos, Bitcoin, Dogecoin, TRON, XRPL, Sui
+  - Non-EVM: Aptos, Bitcoin, Dogecoin, TRON, XRPL, Sui, Solana
 
 
 ## Prerequisites
