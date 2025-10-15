@@ -71,7 +71,8 @@ and accepts input in the form of widely known requestBody argument such as { "js
 **Important: To ensure the tool 'call_nodit_api' works correctly and to avoid errors, you should first use the tool 'get_nodit_api_spec' to obtain detailed API specifications. Depending on the situation, you may omit using the get_nodit_api_spec tool, but it is recommended to use it on the first call.**
 The API list is as follows.
 **Important: Nodit Blockchain Context's operationId format rules**
-- Ethereum network: No prefix (e.g., operationId="eth_blockNumber")
+- Aptos protocol: No prefix (e.g., operationId="aptos_getBlocksByHeight")
+- Ethereum protocol: No prefix (e.g., operationId="eth_blockNumber")
 - All other protocols: Use the format {protocol}-{operationId} (e.g., operationId="polygon-eth_blockNumber")
 - Make sure to use 'call_nodit_api' with the correct protocol, network, and operationId.
 - These operationId format rules are relevant only when using the tool, not when directly using the API.
