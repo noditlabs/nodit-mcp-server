@@ -2,19 +2,19 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import {
   createErrorResponse,
-  findNoditDataApiDetails,
-  isNodeApi,
-  isValidNodeApi,
-  findNoditNodeApiSpec,
   log,
   loadNoditNodeApiSpecMap,
   loadNoditDataApiSpec,
-  NoditOpenApiSpecType,
-  isWebhookApi, isBlockedOperationId
+  NoditOpenApiSpecType
 } from "../helper/nodit-apidoc-helper.js";
 import {
   createTimeoutSignal
 } from "../helper/call-api-helper.js";
+import {
+  validateApiRequest,
+  getApiSpec,
+  getApiUri
+} from "../helper/api-validation.js";
 
 const TIMEOUT_MS = 60_000;
 
@@ -29,68 +29,51 @@ export function registerCallNoditApiTool(server: McpServer) {
       protocol: z.string().describe("Nodit protocol to call. e.g. 'ethereum' or 'polygon'."),
       network: z.string().describe("Nodit network to call. e.g. 'mainnet' or 'amoy'."),
       operationId: z.string().describe("Nodit API operationId to call."),
-      requestBody: z.record(z.any()).describe("JSON request body matching the API's spec."),
+      queryParams: z.record(z.any()).optional().describe("JSON query parameters matching the API's spec."),
+      pathParams: z.record(z.any()).optional().describe("JSON path parameters matching the API's spec."),
+      requestBody: z.record(z.any()).optional().describe("JSON request body matching the API's spec."),
     },
-    async ({ protocol, network, operationId, requestBody }) => {
+    async ({ protocol, network, operationId, queryParams, pathParams, requestBody }) => {
       const toolName = "call_nodit_api";
-
-      if (isWebhookApi(operationId)) {
-        return createErrorResponse(
-            `The Nodit Webhook APIs cannot be invoked via "${toolName}".`,
-            toolName,
-        )
-      }
-
-      if (isBlockedOperationId(operationId)) {
-        return createErrorResponse(
-            `The operationId(${operationId}) cannot be invoked via "${toolName}".`,
-            toolName,
-        )
-      }
 
       const apiKey = process.env.NODIT_API_KEY;
       if (!apiKey) {
           return createErrorResponse(`NODIT_API_KEY environment variable is not set. It is required to call nodit api. Please check your tool configuration.`, toolName);
       }
 
-      const isNodeApiCall = isNodeApi(operationId);
-      const canFindOperationId = isNodeApiCall ? isValidNodeApi(operationId, noditNodeApiSpecMap) : findNoditDataApiDetails(operationId, noditDataApiSpec)
-      if (!canFindOperationId) {
-        return createErrorResponse(`Invalid operationId '${operationId}'. Use 'list_nodit_data_apis' or 'list_nodit_node_apis' first.`, toolName);
+      const validationError = validateApiRequest(protocol, operationId, noditNodeApiSpecMap, noditDataApiSpec);
+      if (validationError) {
+        return validationError;
       }
 
-      const commonMistakeForOperationIdRules = isNodeApiCall && protocol !== "ethereum" && !operationId.includes("-")
-      if (commonMistakeForOperationIdRules) {
-        return createErrorResponse(`Invalid operationId '${operationId}'. For non-ethereum protocols, operationId must include the protocol prefix.`, toolName);
+      let apiSpecDetails;
+      try {
+        apiSpecDetails = getApiSpec(operationId, noditNodeApiSpecMap, noditDataApiSpec);
+      } catch (error: any) {
+        return createErrorResponse(error.message, toolName);
       }
 
-      let apiUrl;
-      if (isNodeApiCall) {
-          const apiUrlTemplate = findNoditNodeApiSpec(operationId, noditNodeApiSpecMap)!.servers[0].url
-          apiUrl = apiUrlTemplate.replace(`{${protocol}-network}`, `${protocol}-${network}`)
-      } else {
-          const noditDataApiPath = Object.entries(noditDataApiSpec.paths).find(([, spec]) => spec.post?.operationId === operationId)
-          if (!noditDataApiPath) {
-              return createErrorResponse(`Invalid operationId '${operationId}'. No API URL found for operationId '${operationId}'.`, toolName);
-          }
-          const apiUrlTemplate = noditDataApiSpec.servers[0].url + noditDataApiPath[0];
-          apiUrl = apiUrlTemplate.replace('{protocol}/{network}', `${protocol}/${network}`)
-      }
-
-      if (!apiUrl) {
-        return createErrorResponse(`Invalid operationId '${operationId}'. No API URL found for operationId '${operationId}'.`, toolName);
-      }
+      const apiUrl = getApiUri(
+        apiSpecDetails,
+        protocol,
+        network,
+        pathParams,
+        queryParams
+      );
 
       const { signal, cleanup } = createTimeoutSignal(TIMEOUT_MS);
       try {
         const apiOptions: RequestInit = {
-            method: 'POST',
+            method: apiSpecDetails.method.toUpperCase(),
             headers: { 'X-API-KEY': apiKey, 'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'nodit-mcp-server' },
-            body: JSON.stringify(requestBody),
             signal,
+        };
+
+        if (requestBody && ['POST', 'PUT', 'PATCH'].includes(apiSpecDetails.method.toUpperCase())) {
+          apiOptions.body = JSON.stringify(requestBody);
         }
 
-        log(`Calling apiUrl: ${apiUrl}, apiOptions: ${JSON.stringify(apiOptions, null, 2)}`);
+        log(`Calling apiUrl: ${apiUrl}, method: ${apiSpecDetails.method}, body: ${apiOptions.body || 'none'}`);
 
         const response = await fetch(apiUrl, apiOptions);
 

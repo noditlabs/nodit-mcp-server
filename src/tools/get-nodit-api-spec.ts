@@ -2,16 +2,16 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import {
     createErrorResponse,
-    findNoditDataApiDetails,
+    getApiSpecDetails,
     isNodeApi,
-    findNoditNodeApiDetails,
-    findNoditWebhookApiDetails,
+    isEthereumNodeApi,
+    isWebhookApi,
     log,
     loadNoditNodeApiSpecMap,
     loadNoditDataApiSpec,
     NoditOpenApiSpecType,
-    isWebhookApi,
-    loadNoditWebhookApiSpec
+    loadNoditWebhookApiSpec,
+    ApiSpecDetails
 } from "../helper/nodit-apidoc-helper.js";
 
 export function registerGetNoditApiSpecTool(server: McpServer) {
@@ -27,27 +27,36 @@ export function registerGetNoditApiSpecTool(server: McpServer) {
       const toolName = "get_nodit_api_spec";
       log(`Tool (${toolName}): Request for operationId: ${operationId}`);
 
-      let apiInfo;
-        if (isNodeApi(operationId)) {
-            apiInfo = findNoditNodeApiDetails(operationId, noditNodeApiSpecMap);
-        } else if (isWebhookApi(operationId)) {
-            const postfix = "\nThis API cannot be invoked using the call_nodit_api tool."
-            apiInfo = findNoditWebhookApiDetails(operationId, noditWebhookApiSpec);
-            if (apiInfo && !apiInfo.details.description?.endsWith(postfix)) {
-                apiInfo.details.description = apiInfo.details.description + postfix;
-            }
-        } else {
-            apiInfo = findNoditDataApiDetails(operationId, noditDataApiSpec);
+      let apiInfo: ApiSpecDetails | null = null;
+      let postfix = "";
+
+      if (isNodeApi(operationId)) {
+        const spec = isEthereumNodeApi(operationId)
+          ? noditNodeApiSpecMap.get(`ethereum-${operationId}`)
+          : noditNodeApiSpecMap.get(operationId);
+
+        if (spec) {
+          apiInfo = getApiSpecDetails(spec, operationId);
         }
+      } else if (isWebhookApi(operationId)) {
+        postfix = "\nThis API cannot be invoked using the call_nodit_api tool.";
+        apiInfo = getApiSpecDetails(noditWebhookApiSpec, operationId);
+      } else {
+        apiInfo = getApiSpecDetails(noditDataApiSpec, operationId);
+      }
+
       if (!apiInfo) {
         return createErrorResponse(`Spec for operationId '${operationId}' not found.`, toolName);
       }
 
       const finalSpecDetails = {
         operationId: operationId,
-        path: apiInfo.path,
+        path: apiInfo.pathMapper,
         method: apiInfo.method,
-        details: apiInfo.details,
+        details: {
+          ...apiInfo.operation,
+          description: apiInfo.operation.description + postfix
+        }
       };
 
       return { content: [{ type: "text", text: JSON.stringify(finalSpecDetails, null, 2) }] };

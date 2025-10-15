@@ -6,6 +6,13 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+export interface ApiSpecDetails {
+  baseUrl: string;
+  pathMapper: string;
+  method: string;
+  operation: OpenApiOperation;
+}
+
 export interface OpenApiOperation {
   operationId: string;
   description: string;
@@ -121,6 +128,14 @@ export function loadNoditNodeApiSpecMap(): Map<string, NoditOpenApiSpecType> {
       }
     }
 
+    const aptosNodeApiSpec = path.resolve(__dirname, '../spec/reference/aptos-node-api.yaml');
+    if (fs.existsSync(aptosNodeApiSpec)) {
+      const aptosNodeApiSpecMap = loadMultiPathApiSpec(aptosNodeApiSpec);
+      aptosNodeApiSpecMap.forEach((spec, operationId) => {
+        noditApiSpecMap.set(operationId, spec);
+      });
+    }
+
     return noditApiSpecMap;
   } catch (error) {
     log('Error reading spec directory:', error);
@@ -133,11 +148,19 @@ function loadMultiPathApiSpec(filePath: string): Map<string, NoditOpenApiSpecTyp
 
   try {
     const spec = loadOpenapiSpecFile(filePath) as NoditOpenApiSpecType;
-    const operationId = spec.paths['/']!.post!.operationId;
-    if (operationId) {
-      specMap.set(operationId, spec);
-    } else {
-      log(`Could not extract operationId from spec file ${filePath}`);
+
+    for (const [path, pathItem] of Object.entries(spec.paths)) {
+      const methods: Array<keyof OpenApiPathItem> = ['get', 'post', 'put', 'patch', 'delete'];
+      for (const method of methods) {
+        const operation = pathItem[method];
+        if (operation?.operationId) {
+          const singleOperationSpec: NoditOpenApiSpecType = {
+            ...spec,
+            paths: { [path]: { [method]: operation } as OpenApiPathItem }
+          };
+          specMap.set(operation.operationId, singleOperationSpec);
+        }
+      }
     }
   } catch (error) {
     log(`Error loading spec file ${filePath}:`, error);
@@ -206,7 +229,7 @@ export function isNodeApi(operationId: string): boolean {
 }
 
 export function isEthereumNodeApi(operationId: string): boolean {
-  return !operationId.includes("-")
+  return !operationId.includes("-") && !operationId.startsWith("aptos_")
 }
 
 export function isWebhookApi(operationId: string): boolean {
@@ -315,6 +338,29 @@ export function findNoditWebhookApiDetails(operationId: string, spec: NoditOpenA
     }
   }
   
+  return null;
+}
+
+export function getApiSpecDetails(spec: NoditOpenApiSpecType, operationId: string): ApiSpecDetails | null {
+  const baseUrl = spec.servers[0]?.url;
+  if (!baseUrl) {
+    return null;
+  }
+
+  for (const [pathMapper, pathItem] of Object.entries(spec.paths)) {
+    const methods: Array<keyof OpenApiPathItem> = ['get', 'post', 'put', 'patch', 'delete'];
+    for (const method of methods) {
+      const operation = pathItem[method];
+      if (operation?.operationId === operationId) {
+        return {
+          baseUrl,
+          pathMapper,
+          method,
+          operation
+        };
+      }
+    }
+  }
   return null;
 }
 

@@ -25,6 +25,7 @@ const guideToUseNodit = `Please keep these rules in mind when using nodit tools:
 `;
 
 const nodeApiNetworks = {
+  "aptos": ["mainnet", "testnet"],
   "ethereum": ["mainnet", "sepolia", "hoodi"],
   "avalanche": ["mainnet", "fuji"],
   "arbitrum": ["mainnet", "sepolia"],

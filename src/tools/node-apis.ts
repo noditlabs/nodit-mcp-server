@@ -14,11 +14,16 @@ export function registerNodeApiTools(server: McpServer) {
         .filter(([, spec]) => spec?.paths)
         .flatMap(([, spec]) =>
           Object.entries(spec.paths)
-            .filter(([, pathItem]) => pathItem?.post?.operationId)
-            .map(([pathKey, pathItem]) => ({
-              operationId: pathItem!.post!.operationId!,
-              path: pathKey
-            }))
+            .flatMap(([pathKey, pathItem]) => {
+              const methods = ['get', 'post', 'put', 'patch', 'delete'] as const;
+              return methods
+                .filter(method => pathItem[method]?.operationId)
+                .map(method => ({
+                  operationId: pathItem[method]!.operationId!,
+                  path: pathKey,
+                  method: method
+                }));
+            })
         )
 
       const commonMethods: typeof apiList = [];
