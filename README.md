@@ -35,21 +35,30 @@ Supported networks include Ethereum, Base, Optimism, Arbitrum, Polygon, Aptos, B
 - [Scope & Limitations](#scope--limitations)
 - [License](#license)
 
-## How Nodit MCP Tools Work
+## List of Tools
 
 Nodit MCP Server provides tools enabling AI agents to dynamically discover, understand, and interact with Nodit's Web3 APIs and data infrastructure. The tools minimize token consumption and maintain a lightweight context by modularizing API interactions into distinct steps:
 
-- **List API Categories (`list_nodit_api_categories`)**  
+- **Tools for Listing API Categories**<br>
   Retrieve a list of high-level API categories available.
+	- `list_nodit_api_categories`
 
-- **List API Operations (`list_nodit_node_apis`, `list_nodit_data_apis`, `list_nodit_aptos_indexer_api_query_root`,`list_nodit_webhook_apis`)**  
+- **Tools for Listing API Operations**  
   Fetch available operations within a selected category (Node APIs, Data APIs, Aptos Indexer APIs, Webhook APIs).
+  	- `list_nodit_node_apis`
+  	- `list_nodit_data_apis`
+  	- `list_nodit_aptos_indexer_api_query_root`
+  	- `list_nodit_webhook_apis`
 
-- **Get API Specification (`get_nodit_api_spec`,`get_nodit_aptos_indexer_api_spec`)**  
+- **Tools for Getting API Specification**  
   Obtain detailed information for a specific API operation (parameters, request/response schema).
+  	- `get_nodit_api_spec`
+  	- `get_nodit_aptos_indexer_api_spec`
 
-- **Call API (`call_nodit_api`,`call_nodit_aptos_indexer_api`)**  
+- **Tools for Calling API**  
   Execute an API call using the operationId and validated parameters.
+  	- `call_nodit_api`
+  	- `call_nodit_aptos_indexer_api`
   
 Nodit MCP Server communicates using the standard JSON-RPC over stdio protocol, following the Model Context Protocol (MCP) conventions.
 Currently, only stdio-based communication is supported for server-client interactions.
