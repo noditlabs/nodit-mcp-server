@@ -25,7 +25,7 @@ With Nodit's MCP, you can:
 Supported networks include Ethereum, Base, Optimism, Arbitrum, Polygon, Aptos, Bitcoin, Dogecoin, TRON, XRPL, GIWA(Sepolia) and more.
 
 ## Table of Contents
-- [How Nodit MCP Tools Work](#how-nodit-mcp-tools-work)
+- [List of Tools](#list-of-tools)
 - [Features](#features)
 - [Prerequisites](#prerequisites)
 - [Running Local Nodit MCP Server](#running-local-nodit-mcp-server)
