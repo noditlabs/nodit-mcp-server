@@ -54,6 +54,7 @@ const dataApiNetworks = {
   "xrpl": ["mainnet"],
   "aptos": ["mainnet"],
   "giwa": ["sepolia"],
+  "ethereumclassic": ["mainnet"],
 }
 
 const aptosApiNetworks = {
