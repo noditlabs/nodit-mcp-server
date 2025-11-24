@@ -50,6 +50,7 @@ const dataApiNetworks = {
   "luniverse": ["mainnet"],
   "bitcoin": ["mainnet"],
   "dogecoin": ["mainnet"],
+  "bitcoincash": ["mainnet"],
   "tron": ["mainnet"],
   "xrpl": ["mainnet"],
   "aptos": ["mainnet"],
