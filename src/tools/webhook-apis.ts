@@ -10,12 +10,12 @@ export function registerWebhookApiTools(server: McpServer) {
             if (item && item.operationId) {
                 const operationId = item.operationId;
                 const description = item.description;
-                const protocols = item.parameters?.find((param) => param.name === "protocol")?.schema?.enum ?? ["aptos"];
+                const chains = item.parameters?.find((param) => param.name === "chain")?.schema?.enum ?? ["aptos"];
 
                 return {
                     operationId,
                     description,
-                    protocols
+                    chains
                 }
             }
         })
@@ -24,10 +24,10 @@ export function registerWebhookApiTools(server: McpServer) {
     server.tool(toolName, "Lists available Nodit Webhook API operations.", {}, () => {
         try {
             const formattedList = apis
-                .map(api => `  - operationId: ${api.operationId}, supported protocols: [${api.protocols.join(',')}], description: ${api.description}`)
+                .map(api => `  - operationId: ${api.operationId}, supported chains: [${api.chains.join(',')}], description: ${api.description}`)
                 .join("\n");
 
-            const content = `Nodit Blockchain Context Webhook api has endpoints with patterns like https://web3.nodit.io/v1/{protocol}/{network}/webhooks. For example, Ethereum mainnet uses an endpoint like https://web3.nodit.io/v1/ethereum/mainnet/webhooks.
+            const content = `Nodit Blockchain Context Webhook api has endpoints with patterns like https://web3.nodit.io/v1/{chain}/{network}/webhooks. For example, Ethereum mainnet uses an endpoint like https://web3.nodit.io/v1/ethereum/mainnet/webhooks.
 The API list is as follows. You can use the get_nodit_api_spec tool to get more detailed API specifications. However, the API cannot be invoked using the call_nodit_api tool.
 - baseUrl: ${noditWebhookApiSpec.servers[0].url}
 - Available Nodit API Operations:

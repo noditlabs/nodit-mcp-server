@@ -14,11 +14,11 @@ export function registerDataApiTools(server: McpServer) {
       const apiList = Object.entries(noditDataApiSpec.paths)
         .filter(([, pathItem]) => pathItem?.post?.operationId)
         .map(([pathKey, pathItem]) => {
-          let supportedProtocols: string[] = [];
+          let supportedChains: string[] = [];
           if (pathItem?.post?.parameters) {
-            const protocolParam = pathItem.post.parameters.find((param: any) => param.name === 'protocol');
-            if (protocolParam?.schema?.enum) {
-              supportedProtocols = protocolParam.schema.enum;
+            const chainParam = pathItem.post.parameters.find((param: any) => param.name === 'chain');
+            if (chainParam?.schema?.enum) {
+              supportedChains = chainParam.schema.enum;
             }
           }
 
@@ -26,15 +26,15 @@ export function registerDataApiTools(server: McpServer) {
             operationId: pathItem!.post!.operationId!,
             description: normalizeDescription(pathItem!.post!.description),
             path: pathKey,
-            supportedProtocols: supportedProtocols
+            supportedChains: supportedChains
           };
         });
 
       const formattedList = apiList
-        .map(api => `  - operationId: ${api.operationId}, supported protocols: [${api.supportedProtocols.join(',')}], description: ${api.description}`)
+        .map(api => `  - operationId: ${api.operationId}, supported chains: [${api.supportedChains.join(',')}], description: ${api.description}`)
         .join("\n");
 
-      const content = `Nodit Blockchain Context data api has endpoints with patterns like https://web3.nodit.io/v1/{protocol}/{network}/getBlockByHashOrNumber. For example, Ethereum mainnet uses an endpoint like https://web3.nodit.io/v1/ethereum/mainnet/getBlockByHashOrNumber.
+      const content = `Nodit Blockchain Context data api has endpoints with patterns like https://web3.nodit.io/v1/{chain}/{network}/getBlockByHashOrNumber. For example, Ethereum mainnet uses an endpoint like https://web3.nodit.io/v1/ethereum/mainnet/getBlockByHashOrNumber.
 The API list is as follows. You can use the get_nodit_api_spec tool to get more detailed API specifications.
 - baseUrl: ${noditDataApiSpec.servers[0].url}
 - Available Nodit API Operations:

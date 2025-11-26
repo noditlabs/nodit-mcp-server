@@ -22,20 +22,20 @@ export function registerNodeApiTools(server: McpServer) {
         )
 
       const commonMethods: typeof apiList = [];
-      const protocolSpecificMethods: typeof apiList = [];
-      const protocolsWithCommonMethods = new Set<string>();
+      const chainSpecificMethods: typeof apiList = [];
+      const chainsWithCommonMethods = new Set<string>();
 
       apiList.forEach(api => {
         const operationId = api.operationId;
         const methodName = operationId.includes('-') ? operationId.split('-')[1] : operationId;
 
-        let protocol = 'ethereum';
+        let chain = 'ethereum';
         if (operationId.includes('-')) {
-          protocol = operationId.split('-')[0];
+          chain = operationId.split('-')[0];
         }
 
         if (methodName.startsWith('eth_') || methodName.startsWith('net_') || methodName.startsWith('web3_')) {
-          protocolsWithCommonMethods.add(protocol);
+          chainsWithCommonMethods.add(chain);
 
           if (!commonMethods.some(item => {
             const itemMethod = item.operationId.includes('-') ? item.operationId.split('-')[1] : item.operationId;
@@ -44,7 +44,7 @@ export function registerNodeApiTools(server: McpServer) {
             commonMethods.push(api);
           }
         } else {
-          protocolSpecificMethods.push(api);
+          chainSpecificMethods.push(api);
         }
       });
 
@@ -55,27 +55,27 @@ export function registerNodeApiTools(server: McpServer) {
         })
         .join("\n");
 
-      const formattedSpecificList = protocolSpecificMethods
+      const formattedSpecificList = chainSpecificMethods
         .map(api => `  - operationId: ${api.operationId}`)
         .join("\n");
 
-      const supportedProtocols = Array.from(protocolsWithCommonMethods).sort().join(', ');
+      const supportedChains = Array.from(chainsWithCommonMethods).sort().join(', ');
 
-      const content = `Nodit Blockchain Context has endpoints with patterns like https://{protocol}-{network}.nodit.io. For example, Ethereum mainnet uses an endpoint like https://ethereum-mainnet.nodit.io
+      const content = `Nodit Blockchain Context has endpoints with patterns like https://{chain}-{network}.nodit.io. For example, Ethereum mainnet uses an endpoint like https://ethereum-mainnet.nodit.io
 and accepts input in the form of widely known requestBody argument such as { "jsonrpc": "2.0", "id": 1, "method": "eth_blockNumber", "params": [] }.
 **Important: To ensure the tool 'call_nodit_api' works correctly and to avoid errors, you should first use the tool 'get_nodit_api_spec' to obtain detailed API specifications. Depending on the situation, you may omit using the get_nodit_api_spec tool, but it is recommended to use it on the first call.**
 The API list is as follows.
 **Important: Nodit Blockchain Context's operationId format rules**
 - Ethereum network: No prefix (e.g., operationId="eth_blockNumber")
-- All other protocols: Use the format {protocol}-{operationId} (e.g., operationId="polygon-eth_blockNumber")
-- Make sure to use 'call_nodit_api' with the correct protocol, network, and operationId.
+- All other chains: Use the format {chain}-{operationId} (e.g., operationId="polygon-eth_blockNumber")
+- Make sure to use 'call_nodit_api' with the correct chain, network, and operationId.
 - These operationId format rules are relevant only when using the tool, not when directly using the API.
-- Common Methods (supported by most protocols, use with appropriate protocol name):
+- Common Methods (supported by most chains, use with appropriate chain name):
 ${formattedCommonList}
-- Protocols supporting common methods: ${supportedProtocols}
-- Protocol-Specific Methods (use with the specified protocol):
+- Chains supporting common methods: ${supportedChains}
+- Chain-Specific Methods (use with the specified chain):
 ${formattedSpecificList}
-Note: You can use these APIs with any supported protocol by simply replacing the protocol name in the endpoint URL.
+Note: You can use these APIs with any supported chain by simply replacing the chain name in the endpoint URL.
 `
 
       return { content: [{ type: "text", text: content }] };

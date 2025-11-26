@@ -26,12 +26,12 @@ export function registerCallNoditApiTool(server: McpServer) {
     "call_nodit_api",
     "This function calls a specific Nodit Blockchain Context API using its operationId. Before making the call, it's recommended to verify the detailed API specifications using the 'get_nodit_api_spec' tool. Please note that using this tool will consume your API quota.",
     {
-      protocol: z.string().describe("Nodit protocol to call. e.g. 'ethereum' or 'polygon'."),
+      chain: z.string().describe("Nodit chain to call. e.g. 'ethereum' or 'polygon'."),
       network: z.string().describe("Nodit network to call. e.g. 'mainnet' or 'amoy'."),
       operationId: z.string().describe("Nodit API operationId to call."),
       requestBody: z.record(z.any()).describe("JSON request body matching the API's spec."),
     },
-    async ({ protocol, network, operationId, requestBody }) => {
+    async ({ chain, network, operationId, requestBody }) => {
       const toolName = "call_nodit_api";
 
       if (isWebhookApi(operationId)) {
@@ -59,22 +59,22 @@ export function registerCallNoditApiTool(server: McpServer) {
         return createErrorResponse(`Invalid operationId '${operationId}'. Use 'list_nodit_data_apis' or 'list_nodit_node_apis' first.`, toolName);
       }
 
-      const commonMistakeForOperationIdRules = isNodeApiCall && protocol !== "ethereum" && !operationId.includes("-")
+      const commonMistakeForOperationIdRules = isNodeApiCall && chain !== "ethereum" && !operationId.includes("-")
       if (commonMistakeForOperationIdRules) {
-        return createErrorResponse(`Invalid operationId '${operationId}'. For non-ethereum protocols, operationId must include the protocol prefix.`, toolName);
+        return createErrorResponse(`Invalid operationId '${operationId}'. For non-ethereum chains, operationId must include the chain prefix.`, toolName);
       }
 
       let apiUrl;
       if (isNodeApiCall) {
           const apiUrlTemplate = findNoditNodeApiSpec(operationId, noditNodeApiSpecMap)!.servers[0].url
-          apiUrl = apiUrlTemplate.replace(`{${protocol}-network}`, `${protocol}-${network}`)
+          apiUrl = apiUrlTemplate.replace(`{${chain}-network}`, `${chain}-${network}`)
       } else {
           const noditDataApiPath = Object.entries(noditDataApiSpec.paths).find(([, spec]) => spec.post?.operationId === operationId)
           if (!noditDataApiPath) {
               return createErrorResponse(`Invalid operationId '${operationId}'. No API URL found for operationId '${operationId}'.`, toolName);
           }
           const apiUrlTemplate = noditDataApiSpec.servers[0].url + noditDataApiPath[0];
-          apiUrl = apiUrlTemplate.replace('{protocol}/{network}', `${protocol}/${network}`)
+          apiUrl = apiUrlTemplate.replace('{chain}/{network}', `${chain}/${network}`)
       }
 
       if (!apiUrl) {

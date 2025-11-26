@@ -79,14 +79,14 @@ export function loadNoditNodeApiSpecMap(): Map<string, NoditOpenApiSpecType> {
       const parts = file.replace('.yaml', '').split('-');
 
       if (parts.length >= 2) {
-        const protocol = parts[1];
+        const chain = parts[1];
         const filePath = path.join(specDir, file);
 
         try {
           const spec = loadOpenapiSpecFile(filePath) as NoditOpenApiSpecType;
           const operationId = spec.paths['/']!.post!.operationId;
           if (operationId) {
-            const key = protocol === 'ethereum' ? `ethereum-${operationId}` : operationId;
+            const key = chain === 'ethereum' ? `ethereum-${operationId}` : operationId;
             noditApiSpecMap.set(key, spec);
           } else {
             log(`Could not extract operationId from spec file ${file}`);

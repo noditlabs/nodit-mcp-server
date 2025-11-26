@@ -78,34 +78,34 @@ export function registerApiCategoriesTools(server: McpServer) {
   const noditNodeApiSpecMap: Map<string, NoditOpenApiSpecType> = loadNoditNodeApiSpecMap();
   const noditWebhookApiSpec: NoditOpenApiSpecType = loadNoditWebhookApiSpec()
 
-  const dataApiProtocols = new Set<string>();
+  const dataApiChains = new Set<string>();
   Object.values(noditDataApiSpec.paths).forEach(pathItem => {
     if (pathItem?.post?.parameters) {
-      const protocolParam = pathItem.post.parameters.find((param: any) => param.name === 'protocol');
-      if (protocolParam?.schema?.enum) {
-        protocolParam.schema.enum.forEach((protocol: string) => dataApiProtocols.add(protocol));
+      const chainParam = pathItem.post.parameters.find((param: any) => param.name === 'chain');
+      if (chainParam?.schema?.enum) {
+        chainParam.schema.enum.forEach((chain: string) => dataApiChains.add(chain));
       }
     }
   });
 
-  const nodeApiProtocols = new Set<string>();
-  nodeApiProtocols.add('ethereum');
+  const nodeApiChains = new Set<string>();
+  nodeApiChains.add('ethereum');
 
   Array.from(noditNodeApiSpecMap.entries()).forEach(([operationId]) => {
     if (operationId.includes('-')) {
-      const protocol = operationId.split('-')[0];
-      nodeApiProtocols.add(protocol);
+      const chain = operationId.split('-')[0];
+      nodeApiChains.add(chain);
     }
   });
 
-  const webhookApiProtocols = new Set<string>();
-  webhookApiProtocols.add('aptos');
+  const webhookApiChains = new Set<string>();
+  webhookApiChains.add('aptos');
   Object.values(noditWebhookApiSpec.paths).forEach(pathItem => {
     if (pathItem?.post?.parameters) {
-      const protocolParam = pathItem.post.parameters.find((param: any) => param.name === 'protocol');
+      const chainParam = pathItem.post.parameters.find((param: any) => param.name === 'chain');
 
-      if (protocolParam?.schema?.enum) {
-        protocolParam.schema.enum.forEach((protocol: string) => webhookApiProtocols.add(protocol));
+      if (chainParam?.schema?.enum) {
+        chainParam.schema.enum.forEach((chain: string) => webhookApiChains.add(chain));
       }
     }
   });
@@ -117,22 +117,22 @@ export function registerApiCategoriesTools(server: McpServer) {
         {
           name: "Nodit Node API",
           description: "Nodit Blockchain Context provides through shared node endpoints operated reliably by Nodit's professional technical team, you can immediately call blockchain Node APIs to query real-time network changes and send transactions without separate infrastructure operations personnel.",
-          supportedProtocols: Array.from(nodeApiProtocols).sort()
+          supportedChains: Array.from(nodeApiChains).sort()
         },
         {
           name: "Nodit Data API",
           description: "Nodit Blockchain Context provides blockchain data collected by Nodit's professional technical team, it provides query APIs that allow access to meticulously indexed blockchain data that is immediately usable without complex separate blockchain data ETL operations.",
-          supportedProtocols: Array.from(dataApiProtocols).sort()
+          supportedChains: Array.from(dataApiChains).sort()
         },
         {
           name: "Nodit Aptos Indexer API",
           description: "Nodit Blockchain Context provides a GraphQL API for accessing indexed data from the Aptos blockchain. This API allows you to query various blockchain data such as coin activities, token activities, and more without having to set up and maintain your own indexer.",
-          supportedProtocols: ["aptos"]
+          supportedChains: ["aptos"]
         },
         {
           name: "Nodit Webhook API",
           description: "Nodit Webhook is a development tool that helps you implement responsive applications for real-time events by sending event occurrence information to the URL registered in the Webhook when a defined on-chain event occurs. You can receive information in real time when important events occur, such as a new transaction occurring on the blockchain or a change in the smart contract status.",
-          supportedProtocols: Array.from(webhookApiProtocols).sort()
+          supportedChains: Array.from(webhookApiChains).sort()
         },
       ];
       const formattedList = categories.map(category => {
@@ -150,13 +150,13 @@ export function registerApiCategoriesTools(server: McpServer) {
         }
 
         if (networkMap) {
-          networkInfo = category.supportedProtocols
-            .filter(protocol => networkMap[protocol])
-            .map(protocol => `    - ${protocol}: ${networkMap[protocol].join(', ')}`)
+          networkInfo = category.supportedChains
+            .filter(chain => networkMap[chain])
+            .map(chain => `    - ${chain}: ${networkMap[chain].join(', ')}`)
             .join('\n');
         }
 
-        return `  - name: ${category.name}, description: ${category.description} supported protocol and network:
+        return `  - name: ${category.name}, description: ${category.description} supported chain and network:
 ${networkInfo}`;
       }).join("\n");
       const content = `${noditServiceDescription}
