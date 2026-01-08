@@ -63,6 +63,15 @@ Nodit MCP Server provides tools enabling AI agents to dynamically discover, unde
 Nodit MCP Server communicates using the standard JSON-RPC over stdio protocol, following the Model Context Protocol (MCP) conventions.
 Currently, only stdio-based communication is supported for server-client interactions.
 
+
+## Running evals
+
+The evals package loads an mcp client that then runs the index.ts file, so there is no need to rebuild between tests. You can load environment variables by prefixing the npx command. Full documentation can be found [here](https://www.mcpevals.io/docs).
+
+```bash
+OPENAI_API_KEY=your-key  npx mcp-eval src/evals/evals.ts src/tools/data-apis.ts
+```
+
 ## Features
 
 The following are the key features and supported blockchain networks provided through Nodit MCP Server for AI agents and LLMs.  
