@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
+import { ZodRawShapeCompat } from "@modelcontextprotocol/sdk/server/zod-compat.js";
+import * as z from "zod/v4";
 import {
   createErrorResponse,
   log,
@@ -14,12 +15,28 @@ import {
 
 const TIMEOUT_MS = 60_000;
 
+type TableType = NonNullable<NonNullable<NonNullable<AptosIndexerApiSpec['metadata']>['sources']>[0]['tables']>[0];
+
+const getNoditAptosIndexerApiSpecInputSchema = {
+  queryRoot: z.string().describe("The name of the query root to get the specification for. Use list_nodit_aptos_indexer_api_query_root to see available query roots."),
+};
+
+const callNoditAptosIndexerApiInputSchema = {
+  network: z.string().describe("Nodit network to call. e.g. 'mainnet' or 'testnet'."),
+  requestBody: z.record(z.string(), z.any()).describe("Graphql request body matching the API's spec."),
+};
+
+type GetNoditAptosIndexerApiSpecInput = z.infer<z.ZodObject<typeof getNoditAptosIndexerApiSpecInputSchema>>;
+type CallNoditAptosIndexerApiInput = z.infer<z.ZodObject<typeof callNoditAptosIndexerApiInputSchema>>;
+
 export function registerAptosIndexerTools(server: McpServer) {
   const noditAptosIndexerApiSpec: AptosIndexerApiSpec = loadNoditAptosIndexerApiSpec();
-  server.tool(
+
+  server.registerTool(
     "list_nodit_aptos_indexer_api_query_root",
-    "Lists all query roots available in the Nodit Aptos Indexer GraphQL API.",
-    {},
+    {
+      description: "Lists all query roots available in the Nodit Aptos Indexer GraphQL API.",
+    },
     async () => {
       const toolName = "list_nodit_aptos_indexer_api_query_root";
 
@@ -53,13 +70,14 @@ export function registerAptosIndexerTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "get_nodit_aptos_indexer_api_spec",
-    "Returns the GraphQL specification for a specific query root in the Nodit Aptos Indexer API.",
     {
-        queryRoot: z.string().describe("The name of the query root to get the specification for. Use list_nodit_aptos_indexer_api_query_root to see available query roots."),
+      description: "Returns the GraphQL specification for a specific query root in the Nodit Aptos Indexer API.",
+      inputSchema: getNoditAptosIndexerApiSpecInputSchema as unknown as ZodRawShapeCompat,
     },
-    async ({ queryRoot }) => {
+    async (args) => {
+      const { queryRoot } = args as GetNoditAptosIndexerApiSpecInput;
       const toolName = "get_nodit_aptos_indexer_api_spec";
 
       try {
@@ -67,7 +85,6 @@ export function registerAptosIndexerTools(server: McpServer) {
           return createErrorResponse("Failed to load or parse the Aptos Indexer API schema", toolName);
         }
 
-        type TableType = NonNullable<NonNullable<NonNullable<AptosIndexerApiSpec['metadata']>['sources']>[0]['tables']>[0];
         let tableSpec: TableType | null = null;
         for (const source of noditAptosIndexerApiSpec.metadata.sources) {
           if (source.tables) {
@@ -129,14 +146,14 @@ export function registerAptosIndexerTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "call_nodit_aptos_indexer_api",
-    "Calls a Nodit Aptos Indexer API. Returns the API response. Before making the call, it's recommended to verify the detailed API specifications using the 'get_nodit_aptos_indexer_api_spec' tool. Please note that using this tool will consume your API quota.",
     {
-        network: z.string().describe("Nodit network to call. e.g. 'mainnet' or 'testnet'."),
-        requestBody: z.record(z.any()).describe("Graphql request body matching the API's spec."),
+      description: "Calls a Nodit Aptos Indexer API. Returns the API response. Before making the call, it's recommended to verify the detailed API specifications using the 'get_nodit_aptos_indexer_api_spec' tool. Please note that using this tool will consume your API quota.",
+      inputSchema: callNoditAptosIndexerApiInputSchema as unknown as ZodRawShapeCompat,
     },
-    async ({ network, requestBody }) => {
+    async (args) => {
+      const { network, requestBody } = args as CallNoditAptosIndexerApiInput;
       const toolName = "call_nodit_aptos_indexer_api";
       const apiKey = process.env.NODIT_API_KEY;
       if (!apiKey) {
@@ -195,10 +212,9 @@ export function registerAptosIndexerTools(server: McpServer) {
         }
 
       } catch (error) {
-        let message = (error as Error).message;
-        if (error instanceof Error && error.name === 'AbortError') {
-          message = `The request took longer than expected and has been terminated. This may be due to high server load or because the requested data is taking longer to process. Please try again later.`;
-        }
+        const message = error instanceof Error && error.name === 'AbortError'
+          ? `The request took longer than expected and has been terminated. This may be due to high server load or because the requested data is taking longer to process. Please try again later.`
+          : (error as Error).message;
         return createErrorResponse(`Network/fetch error calling API: ${message}`, toolName);
       } finally {
         cleanup()

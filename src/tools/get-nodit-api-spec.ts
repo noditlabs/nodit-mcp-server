@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
+import { ZodRawShapeCompat } from "@modelcontextprotocol/sdk/server/zod-compat.js";
+import * as z from "zod/v4";
 import {
     createErrorResponse,
     findNoditDataApiDetails,
@@ -14,16 +15,25 @@ import {
     loadNoditWebhookApiSpec
 } from "../helper/nodit-apidoc-helper.js";
 
+const getNoditApiSpecInputSchema = {
+  operationId: z.string().describe("The operationId to get the resolved specification for."),
+};
+
+type GetNoditApiSpecInput = z.infer<z.ZodObject<typeof getNoditApiSpecInputSchema>>;
+
 export function registerGetNoditApiSpecTool(server: McpServer) {
   const noditNodeApiSpecMap: Map<string, NoditOpenApiSpecType> = loadNoditNodeApiSpecMap();
   const noditDataApiSpec: NoditOpenApiSpecType = loadNoditDataApiSpec();
   const noditWebhookApiSpec: NoditOpenApiSpecType = loadNoditWebhookApiSpec();
 
-  server.tool(
+  server.registerTool(
     "get_nodit_api_spec",
-    "Gets the fully resolved spec details for a Nodit Blockchain Context API operationId. Returns details as a JSON string.",
-    { operationId: z.string().describe("The operationId to get the resolved specification for.") },
-    async ({ operationId }) => {
+    {
+      description: "Gets the fully resolved spec details for a Nodit Blockchain Context API operationId. Returns details as a JSON string.",
+      inputSchema: getNoditApiSpecInputSchema as unknown as ZodRawShapeCompat,
+    },
+    async (args) => {
+      const { operationId } = args as GetNoditApiSpecInput;
       const toolName = "get_nodit_api_spec";
       log(`Tool (${toolName}): Request for operationId: ${operationId}`);
 

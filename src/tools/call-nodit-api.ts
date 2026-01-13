@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
+import { ZodRawShapeCompat } from "@modelcontextprotocol/sdk/server/zod-compat.js";
+import * as z from "zod/v4";
 import {
   createErrorResponse,
   findNoditDataApiDetails,
@@ -18,20 +19,27 @@ import {
 
 const TIMEOUT_MS = 60_000;
 
+const callNoditApiInputSchema = {
+  chain: z.string().describe("Nodit chain to call. e.g. 'ethereum' or 'polygon'."),
+  network: z.string().describe("Nodit network to call. e.g. 'mainnet' or 'amoy'."),
+  operationId: z.string().describe("Nodit API operationId to call."),
+  requestBody: z.record(z.string(), z.any()).describe("JSON request body matching the API's spec."),
+};
+
+type CallNoditApiInput = z.infer<z.ZodObject<typeof callNoditApiInputSchema>>;
+
 export function registerCallNoditApiTool(server: McpServer) {
   const noditNodeApiSpecMap: Map<string, NoditOpenApiSpecType> = loadNoditNodeApiSpecMap();
   const noditDataApiSpec: NoditOpenApiSpecType = loadNoditDataApiSpec();
 
-  server.tool(
+  server.registerTool(
     "call_nodit_api",
-    "This function calls a specific Nodit Blockchain Context API using its operationId. Before making the call, it's recommended to verify the detailed API specifications using the 'get_nodit_api_spec' tool. Please note that using this tool will consume your API quota.",
     {
-      chain: z.string().describe("Nodit chain to call. e.g. 'ethereum' or 'polygon'."),
-      network: z.string().describe("Nodit network to call. e.g. 'mainnet' or 'amoy'."),
-      operationId: z.string().describe("Nodit API operationId to call."),
-      requestBody: z.record(z.any()).describe("JSON request body matching the API's spec."),
+      description: "This function calls a specific Nodit Blockchain Context API using its operationId. Before making the call, it's recommended to verify the detailed API specifications using the 'get_nodit_api_spec' tool. Please note that using this tool will consume your API quota.",
+      inputSchema: callNoditApiInputSchema as unknown as ZodRawShapeCompat,
     },
-    async ({ chain, network, operationId, requestBody }) => {
+    async (args) => {
+      const { chain, network, operationId, requestBody } = args as CallNoditApiInput;
       const toolName = "call_nodit_api";
 
       if (isWebhookApi(operationId)) {
@@ -127,10 +135,9 @@ export function registerCallNoditApiTool(server: McpServer) {
         }
 
       } catch (error) {
-        let message = (error as Error).message;
-        if (error instanceof Error && error.name === 'AbortError') {
-          message = `The request took longer than expected and has been terminated. This may be due to high server load or because the requested data is taking longer to process. Please try again later.`;
-        }
+        const message = error instanceof Error && error.name === 'AbortError'
+          ? `The request took longer than expected and has been terminated. This may be due to high server load or because the requested data is taking longer to process. Please try again later.`
+          : (error as Error).message;
         return createErrorResponse(`Network/fetch error calling API: ${message}`, toolName);
       } finally {
         cleanup();

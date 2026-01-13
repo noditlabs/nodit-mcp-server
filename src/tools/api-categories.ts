@@ -110,63 +110,69 @@ export function registerApiCategoriesTools(server: McpServer) {
     }
   });
 
-  server.tool("list_nodit_api_categories", "Lists available Nodit API categories from Nodit Blockchain Context. To use the Nodit API tool, you must first call this tool.", {}, async () => {
-    const toolName = "list_nodit_api_categories";
-    try {
-      const categories = [
-        {
-          name: "Nodit Node API",
-          description: "Nodit Blockchain Context provides through shared node endpoints operated reliably by Nodit's professional technical team, you can immediately call blockchain Node APIs to query real-time network changes and send transactions without separate infrastructure operations personnel.",
-          supportedChains: Array.from(nodeApiChains).sort()
-        },
-        {
-          name: "Nodit Data API",
-          description: "Nodit Blockchain Context provides blockchain data collected by Nodit's professional technical team, it provides query APIs that allow access to meticulously indexed blockchain data that is immediately usable without complex separate blockchain data ETL operations.",
-          supportedChains: Array.from(dataApiChains).sort()
-        },
-        {
-          name: "Nodit Aptos Indexer API",
-          description: "Nodit Blockchain Context provides a GraphQL API for accessing indexed data from the Aptos blockchain. This API allows you to query various blockchain data such as coin activities, token activities, and more without having to set up and maintain your own indexer.",
-          supportedChains: ["aptos"]
-        },
-        {
-          name: "Nodit Webhook API",
-          description: "Nodit Webhook is a development tool that helps you implement responsive applications for real-time events by sending event occurrence information to the URL registered in the Webhook when a defined on-chain event occurs. You can receive information in real time when important events occur, such as a new transaction occurring on the blockchain or a change in the smart contract status.",
-          supportedChains: Array.from(webhookApiChains).sort()
-        },
-      ];
-      const formattedList = categories.map(category => {
-        let networkInfo = '';
+  server.registerTool(
+    "list_nodit_api_categories",
+    {
+      description: "Lists available Nodit API categories from Nodit Blockchain Context. To use the Nodit API tool, you must first call this tool.",
+    },
+    async () => {
+      const toolName = "list_nodit_api_categories";
+      try {
+        const categories = [
+          {
+            name: "Nodit Node API",
+            description: "Nodit Blockchain Context provides through shared node endpoints operated reliably by Nodit's professional technical team, you can immediately call blockchain Node APIs to query real-time network changes and send transactions without separate infrastructure operations personnel.",
+            supportedChains: Array.from(nodeApiChains).sort()
+          },
+          {
+            name: "Nodit Data API",
+            description: "Nodit Blockchain Context provides blockchain data collected by Nodit's professional technical team, it provides query APIs that allow access to meticulously indexed blockchain data that is immediately usable without complex separate blockchain data ETL operations.",
+            supportedChains: Array.from(dataApiChains).sort()
+          },
+          {
+            name: "Nodit Aptos Indexer API",
+            description: "Nodit Blockchain Context provides a GraphQL API for accessing indexed data from the Aptos blockchain. This API allows you to query various blockchain data such as coin activities, token activities, and more without having to set up and maintain your own indexer.",
+            supportedChains: ["aptos"]
+          },
+          {
+            name: "Nodit Webhook API",
+            description: "Nodit Webhook is a development tool that helps you implement responsive applications for real-time events by sending event occurrence information to the URL registered in the Webhook when a defined on-chain event occurs. You can receive information in real time when important events occur, such as a new transaction occurring on the blockchain or a change in the smart contract status.",
+            supportedChains: Array.from(webhookApiChains).sort()
+          },
+        ];
+        const formattedList = categories.map(category => {
+          let networkInfo = '';
 
-        let networkMap;
-        if (category.name === "Nodit Node API") {
-          networkMap = nodeApiNetworks;
-        } else if (category.name === "Nodit Data API") {
-          networkMap = dataApiNetworks;
-        } else if (category.name === "Nodit Aptos Indexer API") {
-          networkMap = aptosApiNetworks;
-        } else if (category.name === "Nodit Webhook API") {
-          networkMap = webhookApiNetworks;
-        }
+          let networkMap;
+          if (category.name === "Nodit Node API") {
+            networkMap = nodeApiNetworks;
+          } else if (category.name === "Nodit Data API") {
+            networkMap = dataApiNetworks;
+          } else if (category.name === "Nodit Aptos Indexer API") {
+            networkMap = aptosApiNetworks;
+          } else if (category.name === "Nodit Webhook API") {
+            networkMap = webhookApiNetworks;
+          }
 
-        if (networkMap) {
-          networkInfo = category.supportedChains
-            .filter(chain => networkMap[chain])
-            .map(chain => `    - ${chain}: ${networkMap[chain].join(', ')}`)
-            .join('\n');
-        }
+          if (networkMap) {
+            networkInfo = category.supportedChains
+              .filter(chain => networkMap[chain])
+              .map(chain => `    - ${chain}: ${networkMap[chain].join(', ')}`)
+              .join('\n');
+          }
 
-        return `  - name: ${category.name}, description: ${category.description} supported chain and network:
+          return `  - name: ${category.name}, description: ${category.description} supported chain and network:
 ${networkInfo}`;
-      }).join("\n");
-      const content = `${noditServiceDescription}
+        }).join("\n");
+        const content = `${noditServiceDescription}
 ${guideToUseNodit}
 - Available Nodit API Categories:
 ${formattedList}
 `
-      return { content: [{ type: "text", text: content }] };
-    } catch (error) {
-      return createErrorResponse(`Failed to list categories: ${(error as Error).message}`, toolName);
+        return { content: [{ type: "text", text: content }] };
+      } catch (error) {
+        return createErrorResponse(`Failed to list categories: ${(error as Error).message}`, toolName);
+      }
     }
-  });
+  );
 }

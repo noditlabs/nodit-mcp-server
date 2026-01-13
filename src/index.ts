@@ -7,10 +7,6 @@ async function main() {
   const server = new McpServer({
     name: "nodit-blockchain-context",
     version: "1.0.0",
-    capabilities: {
-      resources: {},
-      tools: {},
-    },
   });
 
   registerAllTools(server);
