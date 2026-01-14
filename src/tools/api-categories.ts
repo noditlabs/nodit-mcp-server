@@ -44,6 +44,7 @@ const dataApiNetworks = {
   "arbitrum": ["mainnet", "sepolia"],
   "polygon": ["mainnet", "amoy"],
   "base": ["mainnet", "sepolia"],
+  "bnb": ["mainnet", "testnet"],
   "chiliz": ["mainnet"],
   "optimism": ["mainnet", "sepolia"],
   "kaia": ["mainnet", "kairos"],
@@ -64,6 +65,7 @@ const aptosApiNetworks = {
 
 const webhookApiNetworks = {
   "aptos": ["mainnet", "testnet"],
+  "bnb": ["mainnet", "testnet"],
   "ethereum": ["mainnet", "sepolia", "hoodi"],
   "arbitrum": ["mainnet", "sepolia"],
   "polygon": ["mainnet", "amoy"],
