@@ -28,6 +28,7 @@ const nodeApiNetworks = {
   "ethereum": ["mainnet", "sepolia", "hoodi"],
   "avalanche": ["mainnet", "fuji"],
   "arbitrum": ["mainnet", "sepolia"],
+  "arc": ["testnet"],
   "polygon": ["mainnet", "amoy"],
   "base": ["mainnet", "sepolia"],
   "optimism": ["mainnet", "sepolia"],
