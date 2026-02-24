@@ -16,7 +16,7 @@
   "license": "Apache-2.0",
   "description": "nodit-mcp-server",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.25.2",
+    "@modelcontextprotocol/sdk": "^1.26.0",
     "js-yaml": "^4.1.0",
     "zod": "^3.25.0"
   },
