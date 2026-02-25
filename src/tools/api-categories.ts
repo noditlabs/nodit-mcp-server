@@ -25,39 +25,40 @@ const guideToUseNodit = `Please keep these rules in mind when using nodit tools:
 `;
 
 const nodeApiNetworks = {
-  "ethereum": ["mainnet", "sepolia", "hoodi"],
-  "avalanche": ["mainnet", "fuji"],
   "arbitrum": ["mainnet", "sepolia"],
   "arc": ["testnet"],
-  "polygon": ["mainnet", "amoy"],
+  "avalanche": ["fuji", "mainnet"],
   "base": ["mainnet", "sepolia"],
-  "optimism": ["mainnet", "sepolia"],
-  "kaia": ["mainnet", "kairos"],
-  "luniverse": ["mainnet"],
-  "sui": ["mainnet"],
   "bnb": ["mainnet", "testnet"],
+  "ethereum": ["hoodi", "mainnet", "sepolia"],
   "giwa": ["sepolia"],
-  "solana": ["mainnet", "devnet"],
+  "kaia": ["kairos", "mainnet"],
+  "luniverse": ["mainnet"],
+  "optimism": ["mainnet", "sepolia"],
+  "polygon": ["amoy", "mainnet"],
+  "solana": ["devnet", "mainnet"],
+  "sui": ["mainnet"],
 }
 
 const dataApiNetworks = {
-  "ethereum": ["mainnet", "sepolia", "hoodi"],
+  "aptos": ["mainnet"],
   "arbitrum": ["mainnet", "sepolia"],
-  "polygon": ["mainnet", "amoy"],
+  "arc": ["testnet"],
   "base": ["mainnet", "sepolia"],
+  "bitcoin": ["mainnet"],
+  "bitcoincash": ["mainnet"],
   "bnb": ["mainnet", "testnet"],
   "chiliz": ["mainnet"],
-  "optimism": ["mainnet", "sepolia"],
-  "kaia": ["mainnet", "kairos"],
-  "luniverse": ["mainnet"],
-  "bitcoin": ["mainnet"],
   "dogecoin": ["mainnet"],
-  "bitcoincash": ["mainnet"],
+  "ethereum": ["hoodi", "mainnet", "sepolia"],
+  "ethereumclassic": ["mainnet"],
+  "giwa": ["sepolia"],
+  "kaia": ["kairos", "mainnet"],
+  "luniverse": ["mainnet"],
+  "optimism": ["mainnet", "sepolia"],
+  "polygon": ["amoy", "mainnet"],
   "tron": ["mainnet"],
   "xrpl": ["mainnet"],
-  "aptos": ["mainnet"],
-  "giwa": ["sepolia"],
-  "ethereumclassic": ["mainnet"],
 }
 
 const aptosApiNetworks = {
@@ -66,14 +67,14 @@ const aptosApiNetworks = {
 
 const webhookApiNetworks = {
   "aptos": ["mainnet", "testnet"],
-  "bnb": ["mainnet", "testnet"],
-  "ethereum": ["mainnet", "sepolia", "hoodi"],
   "arbitrum": ["mainnet", "sepolia"],
-  "polygon": ["mainnet", "amoy"],
   "base": ["mainnet", "sepolia"],
-  "optimism": ["mainnet", "sepolia"],
-  "kaia": ["mainnet", "kairos"],
+  "bnb": ["mainnet", "testnet"],
+  "ethereum": ["hoodi", "mainnet", "sepolia"],
   "giwa": ["sepolia"],
+  "kaia": ["kairos", "mainnet"],
+  "optimism": ["mainnet", "sepolia"],
+  "polygon": ["amoy", "mainnet"],
 }
 
 export function registerApiCategoriesTools(server: McpServer) {
