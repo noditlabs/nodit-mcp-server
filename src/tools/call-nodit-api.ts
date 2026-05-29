@@ -3,15 +3,16 @@ import { ZodRawShapeCompat } from "@modelcontextprotocol/sdk/server/zod-compat.j
 import * as z from "zod/v4";
 import {
   createErrorResponse,
-  findNoditDataApiDetails,
+  getApiSpecDetails,
+  isBlockedOperationId,
   isNodeApi,
   isValidNodeApi,
-  findNoditNodeApiSpec,
-  log,
+  isWebhookApi,
+  loadNoditApiManifest,
+  loadNoditDataApiSpecMap,
   loadNoditNodeApiSpecMap,
-  loadNoditDataApiSpec,
-  NoditOpenApiSpecType,
-  isWebhookApi, isBlockedOperationId
+  loadNoditWebhookApiSpecMap,
+  log,
 } from "../helper/nodit-apidoc-helper.js";
 import {
   createTimeoutSignal
@@ -19,18 +20,52 @@ import {
 
 const TIMEOUT_MS = 60_000;
 
+// Fills `{name}` path placeholders from requestBody, and (for GET) appends leftover
+// requestBody keys as query parameters. Lets GET endpoints (cosmos-rest, aptos node)
+// receive path/query parameters that the caller passes in requestBody.
+function resolvePathAndQuery(
+  urlPath: string,
+  httpMethod: string,
+  requestBody: Record<string, any>,
+): { path: string } | { error: string } {
+  const usedKeys = new Set<string>();
+  const resolvedPath = urlPath.replace(/\{([^}]+)\}/g, (_match, name: string) => {
+    const value = requestBody?.[name];
+    if (value === undefined || value === null) return `{${name}}`;
+    usedKeys.add(name);
+    return encodeURIComponent(String(value));
+  });
+
+  const missing = [...resolvedPath.matchAll(/\{([^}]+)\}/g)].map(m => m[1]);
+  if (missing.length > 0) {
+    return { error: `Missing required path parameter(s) [${missing.join(', ')}] for this operation. Pass them as keys in requestBody.` };
+  }
+
+  if (httpMethod === 'get') {
+    const query = Object.entries(requestBody ?? {})
+      .filter(([key, value]) => !usedKeys.has(key) && value !== undefined && value !== null)
+      .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
+    if (query.length > 0) {
+      return { path: `${resolvedPath}?${query.join('&')}` };
+    }
+  }
+  return { path: resolvedPath };
+}
+
 const callNoditApiInputSchema = {
   chain: z.string().describe("Nodit chain to call. e.g. 'ethereum' or 'polygon'."),
   network: z.string().describe("Nodit network to call. e.g. 'mainnet' or 'amoy'."),
-  operationId: z.string().describe("Nodit API operationId to call."),
-  requestBody: z.record(z.string(), z.any()).describe("JSON request body matching the API's spec."),
+  operationId: z.string().describe("Nodit API operationId to call. Must include the chain prefix (e.g., 'ethereum-eth_blocknumber', 'polygon-eth_blocknumber', 'aptos-getAccount')."),
+  requestBody: z.record(z.string(), z.any()).describe("JSON request body matching the API's spec. For POST endpoints (JSON-RPC, etc.) this is sent as the body. For GET endpoints, pass path parameters (e.g. {address} -> { address: '0x...' }) and query parameters (e.g. { 'pagination.limit': 10 }) as keys here; they are injected into the request URL."),
 };
 
 type CallNoditApiInput = z.infer<z.ZodObject<typeof callNoditApiInputSchema>>;
 
 export function registerCallNoditApiTool(server: McpServer) {
-  const noditNodeApiSpecMap: Map<string, NoditOpenApiSpecType> = loadNoditNodeApiSpecMap();
-  const noditDataApiSpec: NoditOpenApiSpecType = loadNoditDataApiSpec();
+  const manifest = loadNoditApiManifest();
+  const noditNodeApiSpecMap = loadNoditNodeApiSpecMap(manifest);
+  const noditDataApiSpecMap = loadNoditDataApiSpecMap(manifest);
+  const noditWebhookApiSpecMap = loadNoditWebhookApiSpecMap(manifest);
 
   server.registerTool(
     "call_nodit_api",
@@ -42,63 +77,109 @@ export function registerCallNoditApiTool(server: McpServer) {
       const { chain, network, operationId, requestBody } = args as CallNoditApiInput;
       const toolName = "call_nodit_api";
 
-      if (isWebhookApi(operationId)) {
+      if (isWebhookApi(operationId, noditWebhookApiSpecMap)) {
         return createErrorResponse(
-            `The Nodit Webhook APIs cannot be invoked via "${toolName}".`,
-            toolName,
-        )
+          `The Nodit Webhook APIs cannot be invoked via "${toolName}".`,
+          toolName,
+        );
       }
 
       if (isBlockedOperationId(operationId)) {
         return createErrorResponse(
-            `The operationId(${operationId}) cannot be invoked via "${toolName}".`,
-            toolName,
-        )
+          `The operationId(${operationId}) cannot be invoked via "${toolName}".`,
+          toolName,
+        );
       }
 
       const apiKey = process.env.NODIT_API_KEY;
       if (!apiKey) {
-          return createErrorResponse(`NODIT_API_KEY environment variable is not set. It is required to call nodit api. Please check your tool configuration.`, toolName);
+        return createErrorResponse(`NODIT_API_KEY environment variable is not set. It is required to call nodit api. Please check your tool configuration.`, toolName);
       }
 
-      const isNodeApiCall = isNodeApi(operationId);
-      const canFindOperationId = isNodeApiCall ? isValidNodeApi(operationId, noditNodeApiSpecMap) : findNoditDataApiDetails(operationId, noditDataApiSpec)
+      const isNodeApiCall = isNodeApi(operationId, noditNodeApiSpecMap);
+      const canFindOperationId = isNodeApiCall
+        ? isValidNodeApi(operationId, noditNodeApiSpecMap)
+        : noditDataApiSpecMap.has(operationId);
+
       if (!canFindOperationId) {
-        return createErrorResponse(`Invalid operationId '${operationId}'. Use 'list_nodit_data_apis' or 'list_nodit_node_apis' first.`, toolName);
+        return createErrorResponse(`Invalid operationId '${operationId}' for chain '${chain}'. Use 'list_nodit_data_apis' or 'list_nodit_node_apis' first.`, toolName);
       }
 
-      const commonMistakeForOperationIdRules = isNodeApiCall && chain !== "ethereum" && !operationId.includes("-")
-      if (commonMistakeForOperationIdRules) {
-        return createErrorResponse(`Invalid operationId '${operationId}'. For non-ethereum chains, operationId must include the chain prefix.`, toolName);
+      if (isNodeApiCall && !operationId.includes('-')) {
+        return createErrorResponse(`Invalid operationId '${operationId}'. operationId must include the chain prefix (e.g., 'ethereum-${operationId}').`, toolName);
       }
 
-      let apiUrl;
-      if (isNodeApiCall) {
-          const apiUrlTemplate = findNoditNodeApiSpec(operationId, noditNodeApiSpecMap)!.servers[0].url
-          apiUrl = apiUrlTemplate.replace(`{${chain}-network}`, `${chain}-${network}`)
-      } else {
-          const noditDataApiPath = Object.entries(noditDataApiSpec.paths).find(([, spec]) => spec.post?.operationId === operationId)
-          if (!noditDataApiPath) {
-              return createErrorResponse(`Invalid operationId '${operationId}'. No API URL found for operationId '${operationId}'.`, toolName);
+      let apiUrl: string;
+      let httpMethod: string;
+      try {
+        if (isNodeApiCall) {
+          const spec = noditNodeApiSpecMap.get(operationId)!;
+          const pathInfo = getApiSpecDetails(spec, operationId);
+          if (!pathInfo) {
+            return createErrorResponse(`Invalid operationId '${operationId}'. No API URL found for operationId '${operationId}'.`, toolName);
           }
-          const apiUrlTemplate = noditDataApiSpec.servers[0].url + noditDataApiPath[0];
-          apiUrl = apiUrlTemplate.replace('{chain}/{network}', `${chain}/${network}`)
-      }
 
-      if (!apiUrl) {
-        return createErrorResponse(`Invalid operationId '${operationId}'. No API URL found for operationId '${operationId}'.`, toolName);
+          const serverUrls = (spec.servers ?? []).map(s => s.url).filter((u): u is string => !!u);
+          if (serverUrls.length === 0) {
+            return createErrorResponse(`Invalid operationId '${operationId}'. No API URL found for operationId '${operationId}'.`, toolName);
+          }
+
+          const chainNetwork = `${chain}-${network}`;
+          let baseUrl = serverUrls.find(u => u.toLowerCase().includes(chainNetwork.toLowerCase()));
+          if (!baseUrl) {
+            const templated = serverUrls.find(u => u.includes('{'));
+            if (templated) {
+              baseUrl = templated.replace(/\{[^}]+}/g, chainNetwork);
+            }
+          }
+          if (!baseUrl) {
+            return createErrorResponse(`Invalid network '${network}' for chain '${chain}' and operationId '${operationId}'.`, toolName);
+          }
+
+          httpMethod = pathInfo.method.toLowerCase();
+          const resolved = resolvePathAndQuery(pathInfo.path, httpMethod, requestBody);
+          if ('error' in resolved) {
+            return createErrorResponse(resolved.error, toolName);
+          }
+          apiUrl = baseUrl.replace(/\/$/, '') + resolved.path;
+        } else {
+          const spec = noditDataApiSpecMap.get(operationId)!;
+          const pathInfo = getApiSpecDetails(spec, operationId);
+          if (!pathInfo) {
+            return createErrorResponse(`Invalid operationId '${operationId}' for chain '${chain}'. No API URL found.`, toolName);
+          }
+          const baseUrl = spec.servers?.[0]?.url;
+          if (!baseUrl) {
+            return createErrorResponse(`Invalid operationId '${operationId}' for chain '${chain}'. No server URL found.`, toolName);
+          }
+          const apiUrlTemplate = baseUrl.replace(/\/$/, '') + pathInfo.path;
+          apiUrl = apiUrlTemplate.replace('{chain}/{network}', `${chain}/${network}`);
+          httpMethod = pathInfo.method.toLowerCase();
+        }
+      } catch (error) {
+        return createErrorResponse(`Failed to resolve API URL: ${(error as Error).message}`, toolName);
       }
 
       const { signal, cleanup } = createTimeoutSignal(TIMEOUT_MS);
       try {
+        const headers: Record<string, string> = {
+          'X-API-KEY': apiKey,
+          'Accept': 'application/json',
+          'User-Agent': 'nodit-mcp-server',
+        };
+
         const apiOptions: RequestInit = {
-            method: 'POST',
-            headers: { 'X-API-KEY': apiKey, 'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'nodit-mcp-server' },
-            body: JSON.stringify(requestBody),
-            signal,
+          method: httpMethod.toUpperCase(),
+          headers,
+          signal,
+        };
+
+        if (httpMethod !== 'get') {
+          headers['Content-Type'] = 'application/json';
+          apiOptions.body = JSON.stringify(requestBody);
         }
 
-        log(`Calling apiUrl: ${apiUrl}, apiOptions: ${JSON.stringify(apiOptions, null, 2)}`);
+        log(`Calling ${httpMethod.toUpperCase()} ${apiUrl}, apiOptions: ${JSON.stringify(apiOptions, null, 2)}`);
 
         const response = await fetch(apiUrl, apiOptions);
 

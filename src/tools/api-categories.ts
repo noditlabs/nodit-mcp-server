@@ -1,10 +1,14 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
   createErrorResponse,
-  loadNoditDataApiSpec,
+  extractChainNetworks,
+  extractDataApiChains,
+  extractNodeApiChains,
+  extractWebhookApiChains,
+  loadNoditApiManifest,
+  loadNoditDataApiSpecMap,
   loadNoditNodeApiSpecMap,
-  loadNoditWebhookApiSpec,
-  NoditOpenApiSpecType
+  loadNoditWebhookApiSpecMap,
 } from "../helper/nodit-apidoc-helper.js";
 
 const noditServiceDescription = `Nodit Blockchain Context is a service that provides stable node operation agency to support easy WEB3 development and refined blockchain data.`;
@@ -18,101 +22,23 @@ const guideToUseNodit = `Please keep these rules in mind when using nodit tools:
 - Use only Nodit APIs, and do not access third-party data sources or external node endpoints; for on-chain queries, always use Nodit's Node API.
 - When possible, prefer using the Data API over Node API as it provides optimized and indexed blockchain data that is more efficient for most queries.
 - When listing available APIs through tools like the Data API List or Node API List, cache the results with a TTL of about one day to reduce redundant calls.
-- If referencing a specific API by operationId, link directly to https://developer.nodit.io/reference/{operationId} without guessing or inventing operationIds.
 - If the user's request lacks required context—such as wallet address, chain name, or time period—ask for clarification rather than assuming defaults.
 - If the requested data is too large to display in full, provide a summary and offer to narrow the scope. If a feature or chain is not supported, clearly inform the user and suggest they check back for future updates.
 - If user asks about their usage stats or request history, kindly guide them to the Nodit Console(https://nodit.lambda256.io)—use the Dashboard for usage metrics and the Request Log(/request-logs) for detailed API call history.
 `;
 
-const nodeApiNetworks = {
-  "arbitrum": ["mainnet", "sepolia"],
-  "arc": ["testnet"],
-  "avalanche": ["fuji", "mainnet"],
-  "base": ["mainnet", "sepolia"],
-  "bnb": ["mainnet", "testnet"],
-  "ethereum": ["hoodi", "mainnet", "sepolia"],
-  "giwa": ["sepolia"],
-  "kaia": ["kairos", "mainnet"],
-  "luniverse": ["mainnet"],
-  "optimism": ["mainnet", "sepolia"],
-  "polygon": ["amoy", "mainnet"],
-  "solana": ["devnet", "mainnet"],
-  "sui": ["mainnet"],
-}
-
-const dataApiNetworks = {
-  "aptos": ["mainnet"],
-  "arbitrum": ["mainnet", "sepolia"],
-  "arc": ["testnet"],
-  "base": ["mainnet", "sepolia"],
-  "bitcoin": ["mainnet"],
-  "bitcoincash": ["mainnet"],
-  "bnb": ["mainnet", "testnet"],
-  "chiliz": ["mainnet"],
-  "dogecoin": ["mainnet"],
-  "ethereum": ["hoodi", "mainnet", "sepolia"],
-  "ethereumclassic": ["mainnet"],
-  "giwa": ["sepolia"],
-  "kaia": ["kairos", "mainnet"],
-  "luniverse": ["mainnet"],
-  "optimism": ["mainnet", "sepolia"],
-  "polygon": ["amoy", "mainnet"],
-  "tron": ["mainnet"],
-  "xrpl": ["mainnet"],
-}
-
-const aptosApiNetworks = {
-  "aptos": ["mainnet", "testnet"]
-}
-
-const webhookApiNetworks = {
-  "aptos": ["mainnet", "testnet"],
-  "arbitrum": ["mainnet", "sepolia"],
-  "base": ["mainnet", "sepolia"],
-  "bnb": ["mainnet", "testnet"],
-  "ethereum": ["hoodi", "mainnet", "sepolia"],
-  "giwa": ["sepolia"],
-  "kaia": ["kairos", "mainnet"],
-  "optimism": ["mainnet", "sepolia"],
-  "polygon": ["amoy", "mainnet"],
-}
-
 export function registerApiCategoriesTools(server: McpServer) {
-  const noditDataApiSpec: NoditOpenApiSpecType = loadNoditDataApiSpec();
-  const noditNodeApiSpecMap: Map<string, NoditOpenApiSpecType> = loadNoditNodeApiSpecMap();
-  const noditWebhookApiSpec: NoditOpenApiSpecType = loadNoditWebhookApiSpec()
+  const manifest = loadNoditApiManifest();
 
-  const dataApiChains = new Set<string>();
-  Object.values(noditDataApiSpec.paths).forEach(pathItem => {
-    if (pathItem?.post?.parameters) {
-      const chainParam = pathItem.post.parameters.find((param: any) => param.name === 'chain');
-      if (chainParam?.schema?.enum) {
-        chainParam.schema.enum.forEach((chain: string) => dataApiChains.add(chain));
-      }
-    }
-  });
+  const dataApiSpecMap = loadNoditDataApiSpecMap(manifest);
+  const nodeApiSpecMap = loadNoditNodeApiSpecMap(manifest);
+  const webhookApiSpecMap = loadNoditWebhookApiSpecMap(manifest);
 
-  const nodeApiChains = new Set<string>();
-  nodeApiChains.add('ethereum');
+  const networksMap = extractChainNetworks([dataApiSpecMap, nodeApiSpecMap, webhookApiSpecMap]);
 
-  Array.from(noditNodeApiSpecMap.entries()).forEach(([operationId]) => {
-    if (operationId.includes('-')) {
-      const chain = operationId.split('-')[0];
-      nodeApiChains.add(chain);
-    }
-  });
-
-  const webhookApiChains = new Set<string>();
-  webhookApiChains.add('aptos');
-  Object.values(noditWebhookApiSpec.paths).forEach(pathItem => {
-    if (pathItem?.post?.parameters) {
-      const chainParam = pathItem.post.parameters.find((param: any) => param.name === 'chain');
-
-      if (chainParam?.schema?.enum) {
-        chainParam.schema.enum.forEach((chain: string) => webhookApiChains.add(chain));
-      }
-    }
-  });
+  const dataApiChains = extractDataApiChains(manifest).sort();
+  const nodeApiChains = extractNodeApiChains(manifest).sort();
+  const webhookApiChains = extractWebhookApiChains(manifest).sort();
 
   server.registerTool(
     "list_nodit_api_categories",
@@ -126,50 +52,40 @@ export function registerApiCategoriesTools(server: McpServer) {
           {
             name: "Nodit Node API",
             description: "Nodit Blockchain Context provides through shared node endpoints operated reliably by Nodit's professional technical team, you can immediately call blockchain Node APIs to query real-time network changes and send transactions without separate infrastructure operations personnel.",
-            supportedChains: Array.from(nodeApiChains).sort()
+            supportedChains: nodeApiChains,
           },
           {
             name: "Nodit Data API",
             description: "Nodit Blockchain Context provides blockchain data collected by Nodit's professional technical team, it provides query APIs that allow access to meticulously indexed blockchain data that is immediately usable without complex separate blockchain data ETL operations.",
-            supportedChains: Array.from(dataApiChains).sort()
+            supportedChains: dataApiChains,
           },
           {
             name: "Nodit Aptos Indexer API",
             description: "Nodit Blockchain Context provides a GraphQL API for accessing indexed data from the Aptos blockchain. This API allows you to query various blockchain data such as coin activities, token activities, and more without having to set up and maintain your own indexer.",
-            supportedChains: ["aptos"]
+            supportedChains: ["aptos"],
           },
           {
             name: "Nodit Webhook API",
             description: "Nodit Webhook is a development tool that helps you implement responsive applications for real-time events by sending event occurrence information to the URL registered in the Webhook when a defined on-chain event occurs. You can receive information in real time when important events occur, such as a new transaction occurring on the blockchain or a change in the smart contract status.",
-            supportedChains: Array.from(webhookApiChains).sort()
+            supportedChains: webhookApiChains,
           },
         ];
+
         const formattedList = categories.map(category => {
-          let networkInfo = '';
+          const networkInfo = category.supportedChains
+            .map(chain => {
+              const networks = networksMap.get(chain) ?? [];
+              return `    - ${chain}: ${networks.join(', ')}`;
+            })
+            .join('\n');
 
-          let networkMap;
-          if (category.name === "Nodit Node API") {
-            networkMap = nodeApiNetworks;
-          } else if (category.name === "Nodit Data API") {
-            networkMap = dataApiNetworks;
-          } else if (category.name === "Nodit Aptos Indexer API") {
-            networkMap = aptosApiNetworks;
-          } else if (category.name === "Nodit Webhook API") {
-            networkMap = webhookApiNetworks;
-          }
-
-          if (networkMap) {
-            networkInfo = category.supportedChains
-              .filter(chain => networkMap[chain])
-              .map(chain => `    - ${chain}: ${networkMap[chain].join(', ')}`)
-              .join('\n');
-          }
-
-          return `  - name: ${category.name}, description: ${category.description} supported chain and network:
+          return `  - name: ${category.name}, description: ${category.description} supported chains and networks:
 ${networkInfo}`;
         }).join("\n");
+
         const content = `${noditServiceDescription}
 ${guideToUseNodit}
+
 - Available Nodit API Categories:
 ${formattedList}
 `

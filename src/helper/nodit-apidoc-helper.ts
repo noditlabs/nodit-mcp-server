@@ -6,6 +6,10 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const SPEC_REFERENCE_DIR = path.resolve(__dirname, '../spec/reference');
+const CHAINS_DIR = path.join(SPEC_REFERENCE_DIR, 'chains');
+const MANIFEST_PATH = path.join(SPEC_REFERENCE_DIR, 'manifest.json');
+
 export interface OpenApiOperation {
   operationId: string;
   description: string;
@@ -31,11 +35,49 @@ export interface OpenApiPathItem {
 export interface NoditOpenApiSpecType {
   openapi: string;
   info: { title: string; version: string };
-  servers: [{ url: string; variables?: Record<string, { default: string }> }];
+  servers: Array<{ url: string; variables?: Record<string, { default: string }> }>;
   paths: Record<string, OpenApiPathItem>;
   components: any;
   security: any[];
 }
+
+export interface NodeApiSubsection {
+  apis?: string[];
+  websocketApis?: string[];
+}
+
+export interface NodeApiSection {
+  supported?: boolean;
+  apis?: string[];
+  evmJsonrpc?: NodeApiSubsection;
+  cometbftJsonrpc?: NodeApiSubsection;
+  cometbftRest?: NodeApiSubsection;
+  cosmosRest?: NodeApiSubsection;
+}
+
+export interface Web3DataApiSection {
+  supported?: boolean;
+  apis?: string[];
+}
+
+export interface WebhookApiSection {
+  supported?: boolean;
+  type?: string;
+  operations?: string[];
+}
+
+export interface ChainManifest {
+  nodeApi?: NodeApiSection;
+  web3DataApi?: Web3DataApiSection;
+  webhookApi?: WebhookApiSection;
+}
+
+export interface NoditApiManifest {
+  chains: Record<string, ChainManifest>;
+}
+
+export const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete'] as const;
+export type HttpMethod = typeof HTTP_METHODS[number];
 
 export const BLOCKED_OPERATION_IDS = new Set([
   "solana-getProgramAccounts",
@@ -56,94 +98,131 @@ export function log(message: string, ...args: any[]) {
   console.error(message, ...args);
 }
 
-export function loadNoditDataApiSpec(): NoditOpenApiSpecType {
-  const specPath = path.resolve(__dirname, '../spec/reference/web3-data-api.yaml');
-  return loadOpenapiSpecFile(specPath) as NoditOpenApiSpecType;
+export function loadNoditApiManifest(): NoditApiManifest {
+  const raw = fs.readFileSync(MANIFEST_PATH, 'utf8');
+  return JSON.parse(raw) as NoditApiManifest;
 }
 
-export function loadNoditWebhookApiSpec(): NoditOpenApiSpecType {
-  const specPath = path.resolve(__dirname, '../spec/reference/webhook.yaml');
-  return loadOpenapiSpecFile(specPath) as NoditOpenApiSpecType;
-}
-
-export function loadNoditNodeApiSpecMap(): Map<string, NoditOpenApiSpecType> {
-  const noditApiSpecMap = new Map<string, NoditOpenApiSpecType>();
-  const specDir = path.resolve(__dirname, '../spec/reference');
-
+function existsSpec(filePath: string): boolean {
   try {
-    const files = fs.readdirSync(specDir);
+    return fs.statSync(filePath).isFile();
+  } catch {
+    return false;
+  }
+}
 
-    const evmSpecFiles = files.filter(file => file.startsWith('evm-') && file.endsWith('.yaml'));
+function indexOperations(
+  specMap: Map<string, NoditOpenApiSpecType>,
+  spec: NoditOpenApiSpecType,
+  chain: string,
+) {
+  const expectedPrefix = `${chain}-`;
 
-    for (const file of evmSpecFiles) {
-      const parts = file.replace('.yaml', '').split('-');
+  for (const [pathKey, pathItem] of Object.entries(spec.paths || {})) {
+    if (!pathItem) continue;
+    for (const method of HTTP_METHODS) {
+      const operation = pathItem[method];
+      if (!operation || !operation.operationId) continue;
 
-      if (parts.length >= 2) {
-        const chain = parts[1];
-        const filePath = path.join(specDir, file);
+      const rawId = operation.operationId;
+      const prefixedId = rawId.startsWith(expectedPrefix) ? rawId : `${expectedPrefix}${rawId}`;
+      const opForRegistration =
+        prefixedId === rawId ? operation : { ...operation, operationId: prefixedId };
 
+      const singlePathItem: OpenApiPathItem = { [method]: opForRegistration };
+      specMap.set(prefixedId, {
+        ...spec,
+        paths: { [pathKey]: singlePathItem },
+      });
+    }
+  }
+}
+
+export function loadNoditDataApiSpecMap(manifest: NoditApiManifest): Map<string, NoditOpenApiSpecType> {
+  const specMap = new Map<string, NoditOpenApiSpecType>();
+
+  for (const [chain, chainManifest] of Object.entries(manifest.chains)) {
+    const web3Api = chainManifest.web3DataApi;
+    if (!web3Api?.supported || !web3Api.apis?.length) continue;
+
+    const sections = new Set(web3Api.apis.map(api => api.split('/')[0]));
+    for (const section of sections) {
+      const filePath = path.join(CHAINS_DIR, chain, 'web3-data-api', `${section}.yaml`);
+      if (!existsSpec(filePath)) continue;
+      try {
+        const spec = loadOpenapiSpecFile(filePath) as NoditOpenApiSpecType;
+        indexOperations(specMap, spec, chain);
+      } catch (error) {
+        log(`Could not load data API spec ${filePath}: ${(error as Error).message}`);
+      }
+    }
+  }
+
+  if (specMap.size === 0) {
+    log('No data API yaml files loaded');
+  }
+
+  return specMap;
+}
+
+export function loadNoditWebhookApiSpecMap(manifest: NoditApiManifest): Map<string, NoditOpenApiSpecType> {
+  const specMap = new Map<string, NoditOpenApiSpecType>();
+
+  for (const [chain, chainManifest] of Object.entries(manifest.chains)) {
+    const webhookApi = chainManifest.webhookApi;
+    if (!webhookApi?.supported) continue;
+
+    const filePath = path.join(CHAINS_DIR, chain, 'webhook-api', 'webhook.yaml');
+    if (!existsSpec(filePath)) continue;
+    try {
+      const spec = loadOpenapiSpecFile(filePath) as NoditOpenApiSpecType;
+      indexOperations(specMap, spec, chain);
+    } catch (error) {
+      log(`Could not load webhook spec ${filePath}: ${(error as Error).message}`);
+    }
+  }
+
+  if (specMap.size === 0) {
+    log('No webhook yaml files loaded');
+  }
+
+  return specMap;
+}
+
+export function loadNoditNodeApiSpecMap(manifest: NoditApiManifest): Map<string, NoditOpenApiSpecType> {
+  const specMap = new Map<string, NoditOpenApiSpecType>();
+
+  for (const [chain, chainManifest] of Object.entries(manifest.chains)) {
+    const nodeApi = chainManifest.nodeApi;
+    if (!nodeApi?.supported) continue;
+
+    // cometbftRest는 cometbftJsonrpc와 동일 서버에서 같은 operationId(status 등)를 노출하는 완전 중복이라 제외한다.
+    // JSON-RPC(POST)가 height 같은 파라미터를 requestBody로 전달할 수 있어 단독으로 사용한다.
+    const sources: Array<{ apis: string[]; subDir: string }> = [
+      { apis: nodeApi.apis ?? [], subDir: 'node-api' },
+      { apis: nodeApi.evmJsonrpc?.apis ?? [], subDir: 'node-api' },
+      { apis: nodeApi.cometbftJsonrpc?.apis ?? [], subDir: 'cometbft-api/json-rpc-api' },
+      { apis: nodeApi.cosmosRest?.apis ?? [], subDir: 'cosmos-rest-api' },
+    ];
+
+    for (const { apis, subDir } of sources) {
+      if (apis.length === 0) continue;
+      const baseDir = path.join(CHAINS_DIR, chain, subDir);
+
+      for (const apiPath of apis) {
+        const filePath = path.join(baseDir, `${apiPath}.yaml`);
+        if (!existsSpec(filePath)) continue;
         try {
           const spec = loadOpenapiSpecFile(filePath) as NoditOpenApiSpecType;
-          const operationId = spec.paths['/']!.post!.operationId;
-          if (operationId) {
-            const key = chain === 'ethereum' ? `ethereum-${operationId}` : operationId;
-            noditApiSpecMap.set(key, spec);
-          } else {
-            log(`Could not extract operationId from spec file ${file}`);
-          }
+          indexOperations(specMap, spec, chain);
         } catch (error) {
-          log(`Error loading spec file ${file}:`, error);
+          log(`Could not load node spec ${filePath}: ${(error as Error).message}`);
         }
       }
     }
-
-    const suiNodeApiSpecDir = path.resolve(__dirname, '../spec/reference/sui-node-api');
-    const suiNodeApiSpecFiles = fs.readdirSync(suiNodeApiSpecDir);
-    for (const file of suiNodeApiSpecFiles) {
-      if (file.endsWith('.yaml')) {
-        const filePath = path.join(suiNodeApiSpecDir, file);
-        const suiNodeApiSpecMap = loadMultiPathApiSpec(filePath);
-        suiNodeApiSpecMap.forEach((spec, operationId) => {
-          noditApiSpecMap.set(operationId, spec);
-        });
-      }
-    }
-
-    const solanaNodeApiSpecDir = path.resolve(__dirname, '../spec/reference/solana-node-api/http-methods');
-    const solanaNodeApiSpecFiles = fs.readdirSync(solanaNodeApiSpecDir);
-    for (const file of solanaNodeApiSpecFiles) {
-      if (file.endsWith('.yaml')) {
-        const filePath = path.join(solanaNodeApiSpecDir, file);
-        const solanaNodeApiSpecMap = loadMultiPathApiSpec(filePath);
-        solanaNodeApiSpecMap.forEach((spec, operationId) => {
-          noditApiSpecMap.set(operationId, spec);
-        });
-      }
-    }
-
-    return noditApiSpecMap;
-  } catch (error) {
-    log('Error reading spec directory:', error);
-    return new Map();
-  }
-}
-
-function loadMultiPathApiSpec(filePath: string): Map<string, NoditOpenApiSpecType> {
-  const specMap = new Map<string, NoditOpenApiSpecType>();
-
-  try {
-    const spec = loadOpenapiSpecFile(filePath) as NoditOpenApiSpecType;
-    const operationId = spec.paths['/']!.post!.operationId;
-    if (operationId) {
-      specMap.set(operationId, spec);
-    } else {
-      log(`Could not extract operationId from spec file ${filePath}`);
-    }
-  } catch (error) {
-    log(`Error loading spec file ${filePath}:`, error);
   }
 
-  return specMap
+  return specMap;
 }
 
 export interface Relationship {
@@ -160,7 +239,7 @@ export interface Relationship {
 
 export interface GraphQLSpec {
   name: string;
-  table?: string;
+  table?: { name?: string; schema?: string };
   columns: string[];
   relationships: {
     object: Array<{
@@ -180,7 +259,7 @@ export interface AptosIndexerApiSpec {
   metadata?: {
     sources?: Array<{
       tables?: Array<{
-        table?: string;
+        table?: { name?: string; schema?: string };
         configuration?: {
           custom_name?: string;
         };
@@ -201,37 +280,29 @@ export function loadNoditAptosIndexerApiSpec(): AptosIndexerApiSpec {
   return loadOpenapiSpecFile(schemaPath) as AptosIndexerApiSpec;
 }
 
-export function isNodeApi(operationId: string): boolean {
-  return operationId.includes("_") || operationId.startsWith("solana-");
+export function isNodeApi(operationId: string, nodeApiSpecMap: Map<string, NoditOpenApiSpecType>): boolean {
+  return nodeApiSpecMap.has(operationId);
 }
 
-export function isEthereumNodeApi(operationId: string): boolean {
-  return !operationId.includes("-")
+export function isWebhookApi(operationId: string, webhookApiSpecMap: Map<string, NoditOpenApiSpecType>): boolean {
+  if (webhookApiSpecMap.has(operationId)) return true;
+  for (const k of webhookApiSpecMap.keys()) {
+    if (k.endsWith(`-${operationId}`)) return true;
+  }
+  return false;
 }
 
-export function isWebhookApi(operationId: string): boolean {
-  return operationId.includes("Webhook");
+export function isValidNodeApi(operationId: string, nodeApiSpecMap: Map<string, NoditOpenApiSpecType>): boolean {
+  return nodeApiSpecMap.has(operationId);
 }
 
 export function isBlockedOperationId(operationId: string): boolean {
   return BLOCKED_OPERATION_IDS.has(operationId);
 }
 
-export function findNoditNodeApiSpec(operationId: string, noditNodeApiSpecMap: Map<string, NoditOpenApiSpecType>): NoditOpenApiSpecType | undefined {
-  let key = operationId;
-  if (isEthereumNodeApi(operationId)) {
-    key = `ethereum-${operationId}`;
-  }
-  return noditNodeApiSpecMap.get(key);
-}
-
-export function isValidNodeApi(operationId: string, noditNodeApiSpecMap: Map<string, NoditOpenApiSpecType>): boolean { 
-  return findNoditNodeApiSpec(operationId, noditNodeApiSpecMap) !== undefined;
-}
-
-export function loadOpenapiSpecFile(path: string): unknown {
-  const fileContents = fs.readFileSync(path, 'utf8');
-  if (path.endsWith('.json')) {
+export function loadOpenapiSpecFile(filePath: string): unknown {
+  const fileContents = fs.readFileSync(filePath, 'utf8');
+  if (filePath.endsWith('.json')) {
     return JSON.parse(fileContents);
   }
   return yaml.load(fileContents);
@@ -248,74 +319,112 @@ export function normalizeDescription(description: string | undefined): string {
   return filteredLines.join('\n').trim();
 }
 
-export function findNoditDataApiDetails(operationId: string, spec: NoditOpenApiSpecType): {
+export interface ApiSpecDetails {
   path: string;
-  method: string;
-  details: OpenApiOperation
-} | null {
-  if (!spec || !spec.paths) {
-    log("findApiDetails: Invalid spec object or missing paths.");
-    return null;
-  }
-  for (const pathKey in spec.paths) {
-    if (Object.prototype.hasOwnProperty.call(spec.paths, pathKey)) {
-      const pathItem = spec.paths[pathKey];
-      if (pathItem?.post?.operationId === operationId) {
-        return {
-          path: pathKey,
-          method: 'post',
-          details: pathItem.post
-        };
-      }
-    }
-  }
-  return null;
+  method: HttpMethod;
+  details: OpenApiOperation;
 }
 
-export function findNoditNodeApiDetails(operationId: string, specMap: Map<string, NoditOpenApiSpecType>): {
-  path: string;
-  method: string;
-  details: OpenApiOperation
-} | null {
-  const spec = findNoditNodeApiSpec(operationId, specMap);
+export function getApiSpecDetails(
+  spec: NoditOpenApiSpecType,
+  operationId: string,
+): ApiSpecDetails | null {
+  if (!spec || !spec.paths) return null;
 
-  if (spec && spec.paths['/']?.post) {
-    return {
-      path: '/',
-      method: 'post',
-      details: spec.paths['/']?.post
-    }
-  }
-
-  return null;
-}
-
-export function findNoditWebhookApiDetails(operationId: string, spec: NoditOpenApiSpecType): {
-  path: string;
-  method: string;
-  details: OpenApiOperation
-} | null {
-  for (const [path, pathItem] of Object.entries(spec.paths)) {
-    const methods: Array<{ method: string; operation?: OpenApiOperation }> = [
-      { method: 'get', operation: pathItem.get },
-      { method: 'post', operation: pathItem.post },
-      { method: 'put', operation: pathItem.put },
-      { method: 'patch', operation: pathItem.patch },
-      { method: 'delete', operation: pathItem.delete }
-    ];
-
-    for (const { method, operation } of methods) {
+  for (const [pathKey, pathItem] of Object.entries(spec.paths)) {
+    if (!pathItem) continue;
+    for (const method of HTTP_METHODS) {
+      const operation = pathItem[method];
       if (operation?.operationId === operationId) {
-        return {
-          path,
-          method,
-          details: operation
-        };
+        return { path: pathKey, method, details: operation };
       }
     }
   }
-  
   return null;
+}
+
+export function extractDataApiChains(manifest: NoditApiManifest): string[] {
+  return Object.entries(manifest.chains)
+    .filter(([, c]) => c.web3DataApi?.supported && (c.web3DataApi.apis?.length ?? 0) > 0)
+    .map(([chain]) => chain);
+}
+
+export function extractNodeApiChains(manifest: NoditApiManifest): string[] {
+  return Object.entries(manifest.chains)
+    .filter(([, c]) => c.nodeApi?.supported)
+    .map(([chain]) => chain);
+}
+
+export function extractWebhookApiChains(manifest: NoditApiManifest): string[] {
+  return Object.entries(manifest.chains)
+    .filter(([, c]) => c.webhookApi?.supported)
+    .map(([chain]) => chain);
+}
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function addNetworksFromServerUrls(
+  result: Map<string, Set<string>>,
+  chain: string,
+  spec: NoditOpenApiSpecType,
+) {
+  const chainLower = chain.toLowerCase();
+  const re = new RegExp(`${escapeRegex(chainLower)}-([a-z0-9]+)\\.nodit\\.io`);
+  for (const server of spec.servers ?? []) {
+    if (!server.url) continue;
+    const m = server.url.toLowerCase().match(re);
+    if (!m) continue;
+    if (!result.has(chain)) result.set(chain, new Set());
+    result.get(chain)!.add(m[1]);
+  }
+}
+
+function addNetworksFromParameters(
+  result: Map<string, Set<string>>,
+  chain: string,
+  spec: NoditOpenApiSpecType,
+) {
+  for (const pathItem of Object.values(spec.paths ?? {})) {
+    if (!pathItem) continue;
+    for (const method of HTTP_METHODS) {
+      const op = pathItem[method];
+      if (!op?.parameters) continue;
+      for (const param of op.parameters) {
+        if (param?.name !== 'network') continue;
+        const values = param.schema?.enum;
+        if (!Array.isArray(values)) continue;
+        for (const v of values) {
+          if (typeof v !== 'string') continue;
+          if (!result.has(chain)) result.set(chain, new Set());
+          result.get(chain)!.add(v);
+        }
+      }
+    }
+  }
+}
+
+export function extractChainNetworks(
+  specMaps: Array<Map<string, NoditOpenApiSpecType>>,
+): Map<string, string[]> {
+  const collected = new Map<string, Set<string>>();
+
+  for (const specMap of specMaps) {
+    for (const [prefixedKey, spec] of specMap.entries()) {
+      const dashIdx = prefixedKey.indexOf('-');
+      if (dashIdx < 0) continue;
+      const chain = prefixedKey.slice(0, dashIdx);
+      addNetworksFromServerUrls(collected, chain, spec);
+      addNetworksFromParameters(collected, chain, spec);
+    }
+  }
+
+  const sorted = new Map<string, string[]>();
+  for (const [chain, set] of collected) {
+    sorted.set(chain, Array.from(set).sort());
+  }
+  return sorted;
 }
 
 export function createErrorResponse(message: string, toolName: string): { content: { type: "text"; text: string }[] } {
