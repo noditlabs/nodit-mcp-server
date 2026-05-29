@@ -116,7 +116,10 @@ function indexOperations(
   spec: NoditOpenApiSpecType,
   chain: string,
 ) {
-  const expectedPrefix = `${chain}-`;
+  // 체인 식별자는 소문자로 정규화한다. 디렉토리/manifest 키가 캐멀케이스인
+  // 체인(예: worldChain)도 호스트네임/컨벤션과 동일하게 소문자(worldchain)로 노출되도록.
+  const lcChain = chain.toLowerCase();
+  const expectedPrefix = `${lcChain}-`;
 
   for (const [pathKey, pathItem] of Object.entries(spec.paths || {})) {
     if (!pathItem) continue;
@@ -125,7 +128,11 @@ function indexOperations(
       if (!operation || !operation.operationId) continue;
 
       const rawId = operation.operationId;
-      const prefixedId = rawId.startsWith(expectedPrefix) ? rawId : `${expectedPrefix}${rawId}`;
+      // 체인 접두사만 소문자로 정규화하고 메서드 stem(대소문자 포함)은 보존한다.
+      const dashIdx = rawId.indexOf("-");
+      const stem =
+        dashIdx > 0 && rawId.slice(0, dashIdx).toLowerCase() === lcChain ? rawId.slice(dashIdx + 1) : rawId;
+      const prefixedId = `${expectedPrefix}${stem}`;
       const opForRegistration =
         prefixedId === rawId ? operation : { ...operation, operationId: prefixedId };
 
@@ -346,19 +353,19 @@ export function getApiSpecDetails(
 export function extractDataApiChains(manifest: NoditApiManifest): string[] {
   return Object.entries(manifest.chains)
     .filter(([, c]) => c.web3DataApi?.supported && (c.web3DataApi.apis?.length ?? 0) > 0)
-    .map(([chain]) => chain);
+    .map(([chain]) => chain.toLowerCase());
 }
 
 export function extractNodeApiChains(manifest: NoditApiManifest): string[] {
   return Object.entries(manifest.chains)
     .filter(([, c]) => c.nodeApi?.supported)
-    .map(([chain]) => chain);
+    .map(([chain]) => chain.toLowerCase());
 }
 
 export function extractWebhookApiChains(manifest: NoditApiManifest): string[] {
   return Object.entries(manifest.chains)
     .filter(([, c]) => c.webhookApi?.supported)
-    .map(([chain]) => chain);
+    .map(([chain]) => chain.toLowerCase());
 }
 
 function escapeRegex(s: string): string {
