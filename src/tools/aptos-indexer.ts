@@ -17,6 +17,59 @@ const TIMEOUT_MS = 60_000;
 
 type TableType = NonNullable<NonNullable<NonNullable<AptosIndexerApiSpec['metadata']>['sources']>[0]['tables']>[0];
 
+// Resolves the GraphQL query root field name for a Hasura table, mirroring Hasura's
+// default naming: custom_name when set; otherwise table.name for the "public" schema,
+// or `{schema}_{name}` for other schemas (e.g. nft_metadata_crawler_parsed_asset_uris).
+// legacy_migration_v1 tables are not exposed on the live endpoint, so they are excluded.
+function getQueryRootName(tableInfo: TableType): string | null {
+  const schema = tableInfo.table?.schema;
+  if (schema === 'legacy_migration_v1') return null;
+  const customName = tableInfo.configuration?.custom_name;
+  if (customName && customName.trim()) return customName;
+  const name = tableInfo.table?.name;
+  if (!name) return null;
+  return schema && schema !== 'public' ? `${schema}_${name}` : name;
+}
+
+function formatColumnMapping(mapping: Record<string, any> | undefined): string {
+  if (!mapping || Object.keys(mapping).length === 0) return "{}";
+  const entries = Object.entries(mapping)
+    .map(([k, v]) => `"${k}": "${v}"`)
+    .join(", ");
+  return `{${entries}}`;
+}
+
+function formatRelationships(relationships: Array<{ name: string; remote_table: string; column_mapping: Record<string, any> }>): string {
+  return relationships
+    .map(rel => `{
+      "name": "${rel.name}",
+      "remote_table": "${rel.remote_table}",
+      "column_mapping": ${formatColumnMapping(rel.column_mapping)}
+    }`)
+    .join(",\n    ");
+}
+
+function formatGraphQLTable(table: { name?: string | null; schema?: string | null } | null | undefined): string {
+  if (!table) return "null";
+  return `{
+    "name": "${table.name ?? "null"}",
+    "schema": "${table.schema ?? "null"}"
+  }`;
+}
+
+function formatGraphQLSpec(spec: GraphQLSpec): string {
+  const columns = spec.columns.map(c => `"${c}"`).join(",\n    ");
+  return `{
+  "name": "${spec.name}",
+  "table": ${formatGraphQLTable(spec.table)},
+  "columns": [${columns}],
+  "relationships": {
+    "object": [${formatRelationships(spec.relationships.object)}],
+    "array": [${formatRelationships(spec.relationships.array)}]
+  }
+}`;
+}
+
 const getNoditAptosIndexerApiSpecInputSchema = {
   queryRoot: z.string().describe("The name of the query root to get the specification for. Use list_nodit_aptos_indexer_api_query_root to see available query roots."),
 };
@@ -49,9 +102,8 @@ export function registerAptosIndexerTools(server: McpServer) {
         for (const source of noditAptosIndexerApiSpec.metadata.sources) {
           if (source.tables) {
             for (const tableInfo of source.tables) {
-              if (tableInfo.configuration && tableInfo.configuration.custom_name) {
-                queryRoots.push(tableInfo.configuration.custom_name);
-              }
+              const name = getQueryRootName(tableInfo);
+              if (name) queryRoots.push(name);
             }
           }
         }
@@ -89,7 +141,7 @@ export function registerAptosIndexerTools(server: McpServer) {
         for (const source of noditAptosIndexerApiSpec.metadata.sources) {
           if (source.tables) {
             for (const tableInfo of source.tables) {
-              if (tableInfo.configuration && tableInfo.configuration.custom_name === queryRoot) {
+              if (getQueryRootName(tableInfo) === queryRoot) {
                 tableSpec = tableInfo;
                 break;
               }
@@ -137,7 +189,7 @@ export function registerAptosIndexerTools(server: McpServer) {
         return {
           content: [{
             type: "text",
-            text: `GraphQL specification for query root '${queryRoot}':\n\n${JSON.stringify(spec, null, 2)}`
+            text: `GraphQL specification for query root '${queryRoot}':\n\n${formatGraphQLSpec(spec)}`
           }]
         };
       } catch (error) {
