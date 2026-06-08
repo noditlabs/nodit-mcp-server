@@ -177,7 +177,7 @@ export function registerCallNoditApiTool(server: McpServer) {
           apiOptions.body = JSON.stringify(requestBody ?? {});
         }
 
-        log(`Calling ${httpMethod.toUpperCase()} ${apiUrl}, apiOptions: ${JSON.stringify(apiOptions, null, 2)}`);
+        log(`Calling ${httpMethod.toUpperCase()} ${apiUrl}`);
 
         const response = await fetch(apiUrl, apiOptions);
 

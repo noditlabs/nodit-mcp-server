@@ -228,7 +228,7 @@ export function registerAptosIndexerTools(server: McpServer) {
           signal,
         };
 
-        log(`Calling Aptos Indexer GraphQL API: ${apiUrl}, apiOptions: ${JSON.stringify(apiOptions, null, 2)}`);
+        log(`Calling Aptos Indexer GraphQL API: ${apiUrl}`);
 
         const response = await fetch(apiUrl, apiOptions);
         const responseBodyText = await response.text();
