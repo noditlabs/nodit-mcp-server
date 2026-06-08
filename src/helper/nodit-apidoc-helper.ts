@@ -115,6 +115,7 @@ function indexOperations(
   specMap: Map<string, NoditOpenApiSpecType>,
   spec: NoditOpenApiSpecType,
   chain: string,
+  operationIdStemPrefix?: string,
 ) {
   // 체인 식별자는 소문자로 정규화한다. 디렉토리/manifest 키가 캐멀케이스인
   // 체인(예: worldChain)도 호스트네임/컨벤션과 동일하게 소문자(worldchain)로 노출되도록.
@@ -132,7 +133,8 @@ function indexOperations(
       const dashIdx = rawId.indexOf("-");
       const stem =
         dashIdx > 0 && rawId.slice(0, dashIdx).toLowerCase() === lcChain ? rawId.slice(dashIdx + 1) : rawId;
-      const prefixedId = `${expectedPrefix}${stem}`;
+      const registeredStem = operationIdStemPrefix ? `${operationIdStemPrefix}-${stem}` : stem;
+      const prefixedId = `${expectedPrefix}${registeredStem}`;
       const opForRegistration =
         prefixedId === rawId ? operation : { ...operation, operationId: prefixedId };
 
@@ -203,16 +205,15 @@ export function loadNoditNodeApiSpecMap(manifest: NoditApiManifest): Map<string,
     const nodeApi = chainManifest.nodeApi;
     if (!nodeApi?.supported) continue;
 
-    // cometbftRest는 cometbftJsonrpc와 동일 서버에서 같은 operationId(status 등)를 노출하는 완전 중복이라 제외한다.
-    // JSON-RPC(POST)가 height 같은 파라미터를 requestBody로 전달할 수 있어 단독으로 사용한다.
-    const sources: Array<{ apis: string[]; subDir: string }> = [
+    const sources: Array<{ apis: string[]; subDir: string; operationIdStemPrefix?: string }> = [
       { apis: nodeApi.apis ?? [], subDir: 'node-api' },
       { apis: nodeApi.evmJsonrpc?.apis ?? [], subDir: 'node-api' },
       { apis: nodeApi.cometbftJsonrpc?.apis ?? [], subDir: 'cometbft-api/json-rpc-api' },
+      { apis: nodeApi.cometbftRest?.apis ?? [], subDir: 'cometbft-api/rest-api', operationIdStemPrefix: 'rest' },
       { apis: nodeApi.cosmosRest?.apis ?? [], subDir: 'cosmos-rest-api' },
     ];
 
-    for (const { apis, subDir } of sources) {
+    for (const { apis, subDir, operationIdStemPrefix } of sources) {
       if (apis.length === 0) continue;
       const baseDir = path.join(CHAINS_DIR, chain, subDir);
 
@@ -221,7 +222,7 @@ export function loadNoditNodeApiSpecMap(manifest: NoditApiManifest): Map<string,
         if (!existsSpec(filePath)) continue;
         try {
           const spec = loadOpenapiSpecFile(filePath) as NoditOpenApiSpecType;
-          indexOperations(specMap, spec, chain);
+          indexOperations(specMap, spec, chain, operationIdStemPrefix);
         } catch (error) {
           log(`Could not load node spec ${filePath}: ${(error as Error).message}`);
         }
