@@ -120,6 +120,12 @@ export function registerGetNoditApiSpecTool(server: McpServer) {
           }))
         : undefined;
 
+      const hasPathOrQuery = Array.isArray(parameters)
+        && parameters.some((p: any) => p.in === 'path' || p.in === 'query');
+      if (!postfix && apiInfo.method?.toLowerCase() === 'get' && hasPathOrQuery) {
+        postfix = "\nWhen calling this endpoint via call_nodit_api, map the 'path' parameters listed in `parameters` to the pathParams argument and the 'query' parameters to the queryParams argument (e.g. pathParams: { \"address\": \"...\" }, queryParams: { \"pagination.limit\": 10 }).";
+      }
+
       const finalSpecDetails = {
         operationId,
         path: apiInfo.path,

@@ -20,34 +20,30 @@ import {
 
 const TIMEOUT_MS = 60_000;
 
-// Fills `{name}` path placeholders from requestBody, and (for GET) appends leftover
-// requestBody keys as query parameters. Lets GET endpoints (cosmos-rest, aptos node)
-// receive path/query parameters that the caller passes in requestBody.
+// Fills `{name}` path placeholders from pathParams and appends queryParams as the
+// query string. Works for GET endpoints (cosmos-rest, aptos node) and POST endpoints
+// that also take query parameters.
 function resolvePathAndQuery(
   urlPath: string,
-  httpMethod: string,
-  requestBody: Record<string, any>,
+  pathParams: Record<string, any> | undefined,
+  queryParams: Record<string, any> | undefined,
 ): { path: string } | { error: string } {
-  const usedKeys = new Set<string>();
   const resolvedPath = urlPath.replace(/\{([^}]+)\}/g, (_match, name: string) => {
-    const value = requestBody?.[name];
+    const value = pathParams?.[name];
     if (value === undefined || value === null) return `{${name}}`;
-    usedKeys.add(name);
     return encodeURIComponent(String(value));
   });
 
   const missing = [...resolvedPath.matchAll(/\{([^}]+)\}/g)].map(m => m[1]);
   if (missing.length > 0) {
-    return { error: `Missing required path parameter(s) [${missing.join(', ')}] for this operation. Pass them as keys in requestBody.` };
+    return { error: `Missing required path parameter(s) [${missing.join(', ')}] for this operation. Pass them in pathParams.` };
   }
 
-  if (httpMethod === 'get') {
-    const query = Object.entries(requestBody ?? {})
-      .filter(([key, value]) => !usedKeys.has(key) && value !== undefined && value !== null)
-      .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
-    if (query.length > 0) {
-      return { path: `${resolvedPath}?${query.join('&')}` };
-    }
+  const query = Object.entries(queryParams ?? {})
+    .filter(([, value]) => value !== undefined && value !== null)
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
+  if (query.length > 0) {
+    return { path: `${resolvedPath}?${query.join('&')}` };
   }
   return { path: resolvedPath };
 }
@@ -56,7 +52,9 @@ const callNoditApiInputSchema = {
   chain: z.string().describe("Nodit chain to call. e.g. 'ethereum' or 'polygon'."),
   network: z.string().describe("Nodit network to call. e.g. 'mainnet' or 'amoy'."),
   operationId: z.string().describe("Nodit API operationId to call. Must include the chain prefix (e.g., 'ethereum-eth_blocknumber', 'polygon-eth_blocknumber', 'aptos-getAccount')."),
-  requestBody: z.record(z.string(), z.any()).describe("JSON request body matching the API's spec. For POST endpoints (JSON-RPC, etc.) this is sent as the body. For GET endpoints, pass path parameters (e.g. {address} -> { address: '0x...' }) and query parameters (e.g. { 'pagination.limit': 10 }) as keys here; they are injected into the request URL."),
+  pathParams: z.record(z.string(), z.any()).optional().describe("Path parameters that fill {placeholders} in the request URL (e.g. { address: '0x...' }). Map each 'path' parameter from get_nodit_api_spec to a key here."),
+  queryParams: z.record(z.string(), z.any()).optional().describe("Query string parameters appended to the request URL (e.g. { 'pagination.limit': 10 }). Map each 'query' parameter from get_nodit_api_spec to a key here."),
+  requestBody: z.record(z.string(), z.any()).optional().describe("JSON request body for POST/PUT endpoints (JSON-RPC, etc.). Not for path/query parameters — use pathParams/queryParams for those."),
 };
 
 type CallNoditApiInput = z.infer<z.ZodObject<typeof callNoditApiInputSchema>>;
@@ -74,7 +72,7 @@ export function registerCallNoditApiTool(server: McpServer) {
       inputSchema: callNoditApiInputSchema as unknown as ZodRawShapeCompat,
     },
     async (args) => {
-      const { chain, network, operationId, requestBody } = args as CallNoditApiInput;
+      const { chain, network, operationId, pathParams, queryParams, requestBody } = args as CallNoditApiInput;
       const toolName = "call_nodit_api";
 
       if (isWebhookApi(operationId, noditWebhookApiSpecMap)) {
@@ -137,7 +135,7 @@ export function registerCallNoditApiTool(server: McpServer) {
           }
 
           httpMethod = pathInfo.method.toLowerCase();
-          const resolved = resolvePathAndQuery(pathInfo.path, httpMethod, requestBody);
+          const resolved = resolvePathAndQuery(pathInfo.path, pathParams, queryParams);
           if ('error' in resolved) {
             return createErrorResponse(resolved.error, toolName);
           }
@@ -176,7 +174,7 @@ export function registerCallNoditApiTool(server: McpServer) {
 
         if (httpMethod !== 'get') {
           headers['Content-Type'] = 'application/json';
-          apiOptions.body = JSON.stringify(requestBody);
+          apiOptions.body = JSON.stringify(requestBody ?? {});
         }
 
         log(`Calling ${httpMethod.toUpperCase()} ${apiUrl}, apiOptions: ${JSON.stringify(apiOptions, null, 2)}`);
