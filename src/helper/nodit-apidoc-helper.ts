@@ -66,10 +66,16 @@ export interface WebhookApiSection {
   operations?: string[];
 }
 
+export interface FlexibleWebhookApiSection {
+  supported?: boolean;
+  apis?: string[];
+}
+
 export interface ChainManifest {
   nodeApi?: NodeApiSection;
   web3DataApi?: Web3DataApiSection;
   webhookApi?: WebhookApiSection;
+  flexibleWebhookApi?: FlexibleWebhookApiSection;
 }
 
 export interface NoditApiManifest {
@@ -201,17 +207,25 @@ export function loadNoditDataApiSpecMap(manifest: NoditApiManifest): Map<string,
 export function loadNoditWebhookApiSpecMap(manifest: NoditApiManifest): Map<string, NoditOpenApiSpecType> {
   const specMap = new Map<string, NoditOpenApiSpecType>();
 
-  for (const [chain, chainManifest] of Object.entries(manifest.chains)) {
-    const webhookApi = chainManifest.webhookApi;
-    if (!webhookApi?.supported) continue;
-
-    const filePath = path.join(CHAINS_DIR, resolveChainDir(chain), 'webhook-api', 'webhook.yaml');
-    if (!existsSpec(filePath)) continue;
+  const loadInto = (chain: string, filePath: string) => {
+    if (!existsSpec(filePath)) return;
     try {
       const spec = loadOpenapiSpecFile(filePath) as NoditOpenApiSpecType;
       indexOperations(specMap, spec, chain);
     } catch (error) {
       log(`Could not load webhook spec ${filePath}: ${(error as Error).message}`);
+    }
+  };
+
+  // 일반 Webhook과 Flexible Webhook을 같은 specMap에 병합한다. 이렇게 하면 카탈로그/목록/
+  // get_nodit_api_spec/call_nodit_api 거부 로직(isWebhookApi)이 별도 분기 없이 모두 적용된다.
+  for (const [chain, chainManifest] of Object.entries(manifest.chains)) {
+    const dir = resolveChainDir(chain);
+    if (chainManifest.webhookApi?.supported) {
+      loadInto(chain, path.join(CHAINS_DIR, dir, 'webhook-api', 'webhook.yaml'));
+    }
+    if (chainManifest.flexibleWebhookApi?.supported) {
+      loadInto(chain, path.join(CHAINS_DIR, dir, 'flexible-webhook-api', 'flexible-webhook.yaml'));
     }
   }
 
