@@ -111,6 +111,30 @@ function existsSpec(filePath: string): boolean {
   }
 }
 
+// manifest 키와 실제 chains 디렉토리명의 대소문자가 어긋날 수 있다(예: manifest는
+// worldchain, 디렉토리는 worldChain). case-sensitive 파일시스템에서도 스펙을 찾도록
+// 디렉토리명을 한 번 스캔해 정확 매칭 우선, 없으면 소문자 매칭으로 resolve한다.
+let chainDirMapCache: Map<string, string> | null = null;
+
+function resolveChainDir(chain: string): string {
+  if (!chainDirMapCache) {
+    const map = new Map<string, string>();
+    let entries: string[] = [];
+    try {
+      entries = fs.readdirSync(CHAINS_DIR);
+    } catch {
+      entries = [];
+    }
+    for (const name of entries) map.set(name, name); // 정확 매칭 우선
+    for (const name of entries) {
+      const lc = name.toLowerCase();
+      if (!map.has(lc)) map.set(lc, name); // 소문자 매칭(정확 매칭을 덮어쓰지 않음)
+    }
+    chainDirMapCache = map;
+  }
+  return chainDirMapCache.get(chain) ?? chainDirMapCache.get(chain.toLowerCase()) ?? chain;
+}
+
 function indexOperations(
   specMap: Map<string, NoditOpenApiSpecType>,
   spec: NoditOpenApiSpecType,
@@ -156,7 +180,7 @@ export function loadNoditDataApiSpecMap(manifest: NoditApiManifest): Map<string,
 
     const sections = new Set(web3Api.apis.map(api => api.split('/')[0]));
     for (const section of sections) {
-      const filePath = path.join(CHAINS_DIR, chain, 'web3-data-api', `${section}.yaml`);
+      const filePath = path.join(CHAINS_DIR, resolveChainDir(chain), 'web3-data-api', `${section}.yaml`);
       if (!existsSpec(filePath)) continue;
       try {
         const spec = loadOpenapiSpecFile(filePath) as NoditOpenApiSpecType;
@@ -181,7 +205,7 @@ export function loadNoditWebhookApiSpecMap(manifest: NoditApiManifest): Map<stri
     const webhookApi = chainManifest.webhookApi;
     if (!webhookApi?.supported) continue;
 
-    const filePath = path.join(CHAINS_DIR, chain, 'webhook-api', 'webhook.yaml');
+    const filePath = path.join(CHAINS_DIR, resolveChainDir(chain), 'webhook-api', 'webhook.yaml');
     if (!existsSpec(filePath)) continue;
     try {
       const spec = loadOpenapiSpecFile(filePath) as NoditOpenApiSpecType;
@@ -215,7 +239,7 @@ export function loadNoditNodeApiSpecMap(manifest: NoditApiManifest): Map<string,
 
     for (const { apis, subDir, operationIdStemPrefix } of sources) {
       if (apis.length === 0) continue;
-      const baseDir = path.join(CHAINS_DIR, chain, subDir);
+      const baseDir = path.join(CHAINS_DIR, resolveChainDir(chain), subDir);
 
       for (const apiPath of apis) {
         const filePath = path.join(baseDir, `${apiPath}.yaml`);
