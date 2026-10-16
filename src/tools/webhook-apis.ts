@@ -5,6 +5,8 @@ import {
   loadNoditWebhookApiSpecMap,
   HTTP_METHODS,
 } from "../helper/nodit-apidoc-helper.js";
+import { READ_ONLY_TOOL_ANNOTATIONS, TOOL_DESCRIPTIONS, TOOL_TITLES } from "./tool-metadata.js";
+import { maskInternalError } from "../helper/tool-error.js";
 
 export function registerWebhookApiTools(server: McpServer) {
   const toolName = "list_nodit_webhook_apis";
@@ -55,7 +57,9 @@ export function registerWebhookApiTools(server: McpServer) {
   server.registerTool(
     toolName,
     {
-      description: "Lists available Nodit Webhook API operations.",
+      title: TOOL_TITLES.list_nodit_webhook_apis,
+      description: TOOL_DESCRIPTIONS.list_nodit_webhook_apis,
+      annotations: READ_ONLY_TOOL_ANNOTATIONS,
     },
     () => {
       try {
@@ -72,7 +76,7 @@ ${formattedList}
 `
         return { content: [{ type: "text", text: content }] };
       } catch (error) {
-        return createErrorResponse(`Failed to list webhook APIs: ${(error as Error).message}`, toolName)
+        return createErrorResponse(maskInternalError(error, toolName), toolName)
       }
     }
   );

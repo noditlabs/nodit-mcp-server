@@ -10,6 +10,8 @@ import {
   loadNoditNodeApiSpecMap,
   loadNoditWebhookApiSpecMap,
 } from "../helper/nodit-apidoc-helper.js";
+import { READ_ONLY_TOOL_ANNOTATIONS, TOOL_DESCRIPTIONS, TOOL_TITLES } from "./tool-metadata.js";
+import { maskInternalError } from "../helper/tool-error.js";
 
 const noditServiceDescription = `Nodit Blockchain Context is a service that provides stable node operation agency to support easy WEB3 development and refined blockchain data.`;
 const guideToUseNodit = `Please keep these rules in mind when using nodit tools:
@@ -43,7 +45,9 @@ export function registerApiCategoriesTools(server: McpServer) {
   server.registerTool(
     "list_nodit_api_categories",
     {
-      description: "Lists available Nodit API categories from Nodit Blockchain Context. To use the Nodit API tool, you must first call this tool.",
+      title: TOOL_TITLES.list_nodit_api_categories,
+      description: TOOL_DESCRIPTIONS.list_nodit_api_categories,
+      annotations: READ_ONLY_TOOL_ANNOTATIONS,
     },
     async () => {
       const toolName = "list_nodit_api_categories";
@@ -91,7 +95,7 @@ ${formattedList}
 `
         return { content: [{ type: "text", text: content }] };
       } catch (error) {
-        return createErrorResponse(`Failed to list categories: ${(error as Error).message}`, toolName);
+        return createErrorResponse(maskInternalError(error, toolName), toolName);
       }
     }
   );

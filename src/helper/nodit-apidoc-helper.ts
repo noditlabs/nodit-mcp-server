@@ -2,6 +2,7 @@ import yaml from 'js-yaml';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { errorMessage } from './tool-error.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -177,7 +178,10 @@ function indexOperations(
   }
 }
 
+let dataApiSpecMapCache: Map<string, NoditOpenApiSpecType> | null = null;
+
 export function loadNoditDataApiSpecMap(manifest: NoditApiManifest): Map<string, NoditOpenApiSpecType> {
+  if (dataApiSpecMapCache) return dataApiSpecMapCache;
   const specMap = new Map<string, NoditOpenApiSpecType>();
 
   for (const [chain, chainManifest] of Object.entries(manifest.chains)) {
@@ -192,7 +196,7 @@ export function loadNoditDataApiSpecMap(manifest: NoditApiManifest): Map<string,
         const spec = loadOpenapiSpecFile(filePath) as NoditOpenApiSpecType;
         indexOperations(specMap, spec, chain);
       } catch (error) {
-        log(`Could not load data API spec ${filePath}: ${(error as Error).message}`);
+        log(`Could not load data API spec ${filePath}: ${errorMessage(error)}`);
       }
     }
   }
@@ -201,10 +205,14 @@ export function loadNoditDataApiSpecMap(manifest: NoditApiManifest): Map<string,
     log('No data API yaml files loaded');
   }
 
+  dataApiSpecMapCache = specMap;
   return specMap;
 }
 
+let webhookApiSpecMapCache: Map<string, NoditOpenApiSpecType> | null = null;
+
 export function loadNoditWebhookApiSpecMap(manifest: NoditApiManifest): Map<string, NoditOpenApiSpecType> {
+  if (webhookApiSpecMapCache) return webhookApiSpecMapCache;
   const specMap = new Map<string, NoditOpenApiSpecType>();
 
   const loadInto = (chain: string, filePath: string) => {
@@ -213,7 +221,7 @@ export function loadNoditWebhookApiSpecMap(manifest: NoditApiManifest): Map<stri
       const spec = loadOpenapiSpecFile(filePath) as NoditOpenApiSpecType;
       indexOperations(specMap, spec, chain);
     } catch (error) {
-      log(`Could not load webhook spec ${filePath}: ${(error as Error).message}`);
+      log(`Could not load webhook spec ${filePath}: ${errorMessage(error)}`);
     }
   };
 
@@ -233,10 +241,14 @@ export function loadNoditWebhookApiSpecMap(manifest: NoditApiManifest): Map<stri
     log('No webhook yaml files loaded');
   }
 
+  webhookApiSpecMapCache = specMap;
   return specMap;
 }
 
+let nodeApiSpecMapCache: Map<string, NoditOpenApiSpecType> | null = null;
+
 export function loadNoditNodeApiSpecMap(manifest: NoditApiManifest): Map<string, NoditOpenApiSpecType> {
+  if (nodeApiSpecMapCache) return nodeApiSpecMapCache;
   const specMap = new Map<string, NoditOpenApiSpecType>();
 
   for (const [chain, chainManifest] of Object.entries(manifest.chains)) {
@@ -262,12 +274,13 @@ export function loadNoditNodeApiSpecMap(manifest: NoditApiManifest): Map<string,
           const spec = loadOpenapiSpecFile(filePath) as NoditOpenApiSpecType;
           indexOperations(specMap, spec, chain, operationIdStemPrefix);
         } catch (error) {
-          log(`Could not load node spec ${filePath}: ${(error as Error).message}`);
+          log(`Could not load node spec ${filePath}: ${errorMessage(error)}`);
         }
       }
     }
   }
 
+  nodeApiSpecMapCache = specMap;
   return specMap;
 }
 
@@ -344,6 +357,45 @@ export function isValidNodeApi(operationId: string, nodeApiSpecMap: Map<string, 
 
 export function isBlockedOperationId(operationId: string): boolean {
   return BLOCKED_OPERATION_IDS.has(operationId);
+}
+
+export function methodStem(operationId: string): string {
+  const dashIndex = operationId.indexOf('-');
+  const stem = dashIndex < 0 ? operationId : operationId.slice(dashIndex + 1);
+  return stem.startsWith('rest-') ? stem.slice('rest-'.length) : stem;
+}
+
+export function lenientOperationIdKey(operationId: string): string {
+  const lower = operationId.toLowerCase();
+  const underscore = lower.indexOf('_');
+  if (underscore < 0) return lower;
+  const dash = lower.indexOf('-');
+  if (dash >= 0 && dash < underscore) return lower;
+  return `${lower.slice(0, underscore)}-${lower.slice(underscore + 1)}`;
+}
+
+export function suggestOperationId(operationId: string, known: Iterable<string>): string | null {
+  if (operationId.trim().length === 0) return null;
+  const wanted = lenientOperationIdKey(operationId);
+  for (const candidate of known) {
+    if (candidate !== operationId && lenientOperationIdKey(candidate) === wanted) return candidate;
+  }
+  return null;
+}
+
+export function suggestionSuffix(operationId: string, known: Iterable<string>): string {
+  const suggestion = suggestOperationId(operationId, known);
+  return suggestion === null ? '' : ` Did you mean '${suggestion}'?`;
+}
+
+export function knownOperationIds(
+  ...specMaps: Array<Map<string, NoditOpenApiSpecType>>
+): string[] {
+  const ids: string[] = [];
+  for (const specMap of specMaps) {
+    for (const key of specMap.keys()) ids.push(key);
+  }
+  return ids;
 }
 
 export function loadOpenapiSpecFile(filePath: string): unknown {
@@ -473,7 +525,10 @@ export function extractChainNetworks(
   return sorted;
 }
 
-export function createErrorResponse(message: string, toolName: string): { content: { type: "text"; text: string }[] } {
+export function createErrorResponse(
+  message: string,
+  toolName: string,
+): { content: { type: "text"; text: string }[]; isError: true } {
   log(`Tool Error (${toolName}): ${message}`);
-  return { content: [{ type: "text" as const, text: `Tool Error: ${message}` }] };
+  return { content: [{ type: "text" as const, text: `Tool Error: ${message}` }], isError: true };
 }

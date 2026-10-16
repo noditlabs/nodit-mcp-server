@@ -6,6 +6,7 @@
     "nodit-mcp-server": "build/index.js"
   },
   "scripts": {
+    "prepack": "npm run build",
     "build": "rm -rf build && tsc && echo '#!/usr/bin/env node' | cat - build/index.js > temp && mv temp build/index.js && chmod 755 build/index.js && mkdir -p build/spec && cp -r spec/reference build/spec/reference && cp -r src/nodit-aptos-indexer-api-schema.json build/nodit-aptos-indexer-api-schema.json"
   },
   "files": [
@@ -18,7 +19,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
     "js-yaml": "^4.1.0",
-    "zod": "^3.25.0"
+    "zod": "^4.3.5"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",

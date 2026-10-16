@@ -6,15 +6,24 @@ import {
   getApiSpecDetails,
   isNodeApi,
   isWebhookApi,
+  knownOperationIds,
   loadNoditApiManifest,
   loadNoditDataApiSpecMap,
   loadNoditNodeApiSpecMap,
   loadNoditWebhookApiSpecMap,
   log,
+  suggestionSuffix,
 } from "../helper/nodit-apidoc-helper.js";
+import {
+  createRefResolver,
+  projectRequestBody,
+  projectResponses,
+  resolveSecurityRequirements,
+} from "../helper/openapi-resolver.js";
+import { READ_ONLY_TOOL_ANNOTATIONS, TOOL_DESCRIPTIONS, TOOL_PARAM_DESCRIPTIONS, TOOL_TITLES } from "./tool-metadata.js";
 
 const getNoditApiSpecInputSchema = {
-  operationId: z.string().describe("The operationId to get the resolved specification for. Must include the chain prefix in `{chain}-{methodName}` format (e.g., 'ethereum-eth_blocknumber', 'aptos-getAccount', 'ethereum-createWebhook'). Method-name-only input (e.g., 'eth_blocknumber') is rejected with guidance on the available chains."),
+  operationId: z.string().describe(TOOL_PARAM_DESCRIPTIONS.SPEC_OPERATION_ID),
 };
 
 function collectChainsForStem(stem: string, specMap: Map<string, any>): string[] {
@@ -68,7 +77,9 @@ export function registerGetNoditApiSpecTool(server: McpServer) {
   server.registerTool(
     "get_nodit_api_spec",
     {
-      description: "Gets the fully resolved spec details for a Nodit Blockchain Context API operationId. Returns details as a JSON string.",
+      title: TOOL_TITLES.get_nodit_api_spec,
+      description: TOOL_DESCRIPTIONS.get_nodit_api_spec,
+      annotations: READ_ONLY_TOOL_ANNOTATIONS,
       inputSchema: getNoditApiSpecInputSchema as unknown as ZodRawShapeCompat,
     },
     async (args) => {
@@ -77,23 +88,24 @@ export function registerGetNoditApiSpecTool(server: McpServer) {
       log(`Tool (${toolName}): Request for operationId: ${operationId}`);
 
       let apiInfo: ReturnType<typeof getApiSpecDetails> = null;
+      let specDocument: any = null;
       let postfix = '';
 
       if (isNodeApi(operationId, noditNodeApiSpecMap)) {
         const spec = noditNodeApiSpecMap.get(operationId);
-        if (spec) apiInfo = getApiSpecDetails(spec, operationId);
+        if (spec) { specDocument = spec; apiInfo = getApiSpecDetails(spec, operationId); }
       } else if (isWebhookApi(operationId, noditWebhookApiSpecMap)) {
         postfix = "\nThis API cannot be invoked using the call_nodit_api tool.";
         if (noditWebhookApiSpecMap.has(operationId)) {
           const spec = noditWebhookApiSpecMap.get(operationId);
-          if (spec) apiInfo = getApiSpecDetails(spec, operationId);
+          if (spec) { specDocument = spec; apiInfo = getApiSpecDetails(spec, operationId); }
         } else {
           const chains = collectChainsForStem(operationId, noditWebhookApiSpecMap);
           if (chains.length > 0) return missingChainPrefixError(operationId, chains, toolName);
         }
       } else if (noditDataApiSpecMap.has(operationId)) {
         const spec = noditDataApiSpecMap.get(operationId);
-        if (spec) apiInfo = getApiSpecDetails(spec, operationId);
+        if (spec) { specDocument = spec; apiInfo = getApiSpecDetails(spec, operationId); }
       } else {
         const chains = collectChainsForStem(operationId, noditDataApiSpecMap);
         if (chains.length > 0) return missingChainPrefixError(operationId, chains, toolName);
@@ -102,12 +114,18 @@ export function registerGetNoditApiSpecTool(server: McpServer) {
       }
 
       if (!apiInfo) {
-        return createErrorResponse(`Spec for operationId '${operationId}' not found.`, toolName);
+        const suggestion = suggestionSuffix(
+          operationId,
+          knownOperationIds(noditNodeApiSpecMap, noditDataApiSpecMap, noditWebhookApiSpecMap),
+        );
+        return createErrorResponse(`Spec for operationId '${operationId}' not found.${suggestion}`, toolName);
       }
 
       const d = apiInfo.details as any;
-      const parameters = Array.isArray(d.parameters)
-        ? d.parameters.map((p: any) => ({
+      const resolveRefs = createRefResolver(specDocument);
+      const resolvedParameters = resolveRefs(d.parameters);
+      const parameters = Array.isArray(resolvedParameters)
+        ? resolvedParameters.map((p: any) => ({
             name: p?.name,
             schema: {
               type: p?.schema?.type,
@@ -133,10 +151,10 @@ export function registerGetNoditApiSpecTool(server: McpServer) {
         details: {
           operationId: d.operationId,
           description: `${d.description ?? ''}${postfix}`,
-          requestBody: d.requestBody,
-          responses: d.responses,
+          requestBody: projectRequestBody(resolveRefs(d.requestBody)),
+          responses: projectResponses(resolveRefs(d.responses)),
           summary: d.summary,
-          security: d.security,
+          security: resolveSecurityRequirements(d.security, specDocument, resolveRefs),
           tags: d.tags,
           parameters,
         },

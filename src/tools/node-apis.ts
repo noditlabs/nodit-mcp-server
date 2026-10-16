@@ -5,6 +5,8 @@ import {
   loadNoditNodeApiSpecMap,
   HTTP_METHODS,
 } from "../helper/nodit-apidoc-helper.js";
+import { READ_ONLY_TOOL_ANNOTATIONS, TOOL_DESCRIPTIONS, TOOL_TITLES } from "./tool-metadata.js";
+import { maskInternalError } from "../helper/tool-error.js";
 
 export function registerNodeApiTools(server: McpServer) {
   const manifest = loadNoditApiManifest();
@@ -13,7 +15,9 @@ export function registerNodeApiTools(server: McpServer) {
   server.registerTool(
     "list_nodit_node_apis",
     {
-      description: "Lists available Nodit API operations.",
+      title: TOOL_TITLES.list_nodit_node_apis,
+      description: TOOL_DESCRIPTIONS.list_nodit_node_apis,
+      annotations: READ_ONLY_TOOL_ANNOTATIONS,
     },
     async () => {
       const toolName = "list_nodit_node_apis";
@@ -79,7 +83,7 @@ Note: Only call \`{chain}-{methodName}\` combinations where the chain appears in
 
         return { content: [{ type: "text", text: content }] };
       } catch (error) {
-        return createErrorResponse(`Failed to list APIs: ${(error as Error).message}`, toolName);
+        return createErrorResponse(maskInternalError(error, toolName), toolName);
       }
     }
   );

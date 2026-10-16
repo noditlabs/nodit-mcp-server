@@ -3,17 +3,14 @@ import { ZodRawShapeCompat } from "@modelcontextprotocol/sdk/server/zod-compat.j
 import * as z from "zod/v4";
 import {
   createErrorResponse,
-  log,
   loadNoditAptosIndexerApiSpec,
   AptosIndexerApiSpec,
   Relationship,
   GraphQLSpec
 } from "../helper/nodit-apidoc-helper.js";
-import {
-  createTimeoutSignal
-} from "../helper/call-api-helper.js";
-
-const TIMEOUT_MS = 60_000;
+import { callNoditHttp } from "../helper/nodit-http-client.js";
+import { maskInternalError } from "../helper/tool-error.js";
+import { CALLING_TOOL_ANNOTATIONS, READ_ONLY_TOOL_ANNOTATIONS, TOOL_DESCRIPTIONS, TOOL_PARAM_DESCRIPTIONS, TOOL_TITLES } from "./tool-metadata.js";
 
 type TableType = NonNullable<NonNullable<NonNullable<AptosIndexerApiSpec['metadata']>['sources']>[0]['tables']>[0];
 
@@ -71,30 +68,62 @@ function formatGraphQLSpec(spec: GraphQLSpec): string {
 }
 
 const getNoditAptosIndexerApiSpecInputSchema = {
-  queryRoot: z.string().describe("The name of the query root to get the specification for. Use list_nodit_aptos_indexer_api_query_root to see available query roots."),
+  queryRoot: z.string().describe(TOOL_PARAM_DESCRIPTIONS.APTOS_QUERY_ROOT),
 };
 
 const callNoditAptosIndexerApiInputSchema = {
-  network: z.string().describe("Nodit network to call. e.g. 'mainnet' or 'testnet'."),
-  requestBody: z.record(z.string(), z.any()).describe("Graphql request body matching the API's spec."),
+  network: z.string().describe(TOOL_PARAM_DESCRIPTIONS.APTOS_NETWORK),
+  requestBody: z.record(z.string(), z.any()).describe(TOOL_PARAM_DESCRIPTIONS.APTOS_REQUEST_BODY),
 };
 
 type GetNoditAptosIndexerApiSpecInput = z.infer<z.ZodObject<typeof getNoditAptosIndexerApiSpecInputSchema>>;
 type CallNoditAptosIndexerApiInput = z.infer<z.ZodObject<typeof callNoditAptosIndexerApiInputSchema>>;
 
-export function registerAptosIndexerTools(server: McpServer) {
-  const noditAptosIndexerApiSpec: AptosIndexerApiSpec = loadNoditAptosIndexerApiSpec();
+function mapRelationships(relationships: Relationship[] | undefined) {
+  if (!relationships) return [];
+  return relationships.map((rel: Relationship) => {
+    if (!rel || typeof rel !== 'object') return { name: 'unknown', remote_table: 'unknown', column_mapping: {} };
+    return {
+      name: rel.name ?? 'unknown',
+      remote_table: rel.using?.manual_configuration?.remote_table?.name ?? 'unknown',
+      column_mapping: rel.using?.manual_configuration?.column_mapping ?? {}
+    };
+  });
+}
 
+type SourcedSpec = AptosIndexerApiSpec & {
+  metadata: NonNullable<AptosIndexerApiSpec['metadata']> & {
+    sources: NonNullable<NonNullable<AptosIndexerApiSpec['metadata']>['sources']>;
+  };
+};
+
+function findTableSpec(spec: SourcedSpec, queryRoot: string): TableType | null {
+  for (const source of spec.metadata.sources) {
+    if (!source.tables) continue;
+    for (const tableInfo of source.tables) {
+      if (getQueryRootName(tableInfo) === queryRoot) return tableInfo;
+    }
+  }
+  return null;
+}
+
+function hasSources(spec: AptosIndexerApiSpec | null | undefined): spec is SourcedSpec {
+  return !!spec && !!spec.metadata && !!spec.metadata.sources;
+}
+
+function registerQueryRootListTool(server: McpServer, noditAptosIndexerApiSpec: AptosIndexerApiSpec) {
   server.registerTool(
     "list_nodit_aptos_indexer_api_query_root",
     {
-      description: "Lists all query roots available in the Nodit Aptos Indexer GraphQL API.",
+      title: TOOL_TITLES.list_nodit_aptos_indexer_api_query_root,
+      description: TOOL_DESCRIPTIONS.list_nodit_aptos_indexer_api_query_root,
+      annotations: READ_ONLY_TOOL_ANNOTATIONS,
     },
     async () => {
       const toolName = "list_nodit_aptos_indexer_api_query_root";
 
       try {
-        if (!noditAptosIndexerApiSpec || !noditAptosIndexerApiSpec.metadata || !noditAptosIndexerApiSpec.metadata.sources) {
+        if (!hasSources(noditAptosIndexerApiSpec)) {
           return createErrorResponse("Failed to load or parse the Aptos Indexer API schema", toolName);
         }
 
@@ -115,17 +144,21 @@ export function registerAptosIndexerTools(server: McpServer) {
         queryRoots.sort();
 
         const resultText = `Available Aptos Indexer API query roots:\n\n${queryRoots.join('\n')}`;
-        return { content: [{ type: "text", text: resultText }] };
+        return { content: [{ type: "text" as const, text: resultText }] };
       } catch (error) {
-        return createErrorResponse(`Error processing Aptos Indexer API schema: ${(error as Error).message}`, toolName);
+        return createErrorResponse(maskInternalError(error, toolName), toolName);
       }
     }
   );
+}
 
+function registerAptosIndexerSpecTool(server: McpServer, noditAptosIndexerApiSpec: AptosIndexerApiSpec) {
   server.registerTool(
     "get_nodit_aptos_indexer_api_spec",
     {
-      description: "Returns the GraphQL specification for a specific query root in the Nodit Aptos Indexer API.",
+      title: TOOL_TITLES.get_nodit_aptos_indexer_api_spec,
+      description: TOOL_DESCRIPTIONS.get_nodit_aptos_indexer_api_spec,
+      annotations: READ_ONLY_TOOL_ANNOTATIONS,
       inputSchema: getNoditAptosIndexerApiSpecInputSchema as unknown as ZodRawShapeCompat,
     },
     async (args) => {
@@ -133,23 +166,11 @@ export function registerAptosIndexerTools(server: McpServer) {
       const toolName = "get_nodit_aptos_indexer_api_spec";
 
       try {
-        if (!noditAptosIndexerApiSpec || !noditAptosIndexerApiSpec.metadata || !noditAptosIndexerApiSpec.metadata.sources) {
+        if (!hasSources(noditAptosIndexerApiSpec)) {
           return createErrorResponse("Failed to load or parse the Aptos Indexer API schema", toolName);
         }
 
-        let tableSpec: TableType | null = null;
-        for (const source of noditAptosIndexerApiSpec.metadata.sources) {
-          if (source.tables) {
-            for (const tableInfo of source.tables) {
-              if (getQueryRootName(tableInfo) === queryRoot) {
-                tableSpec = tableInfo;
-                break;
-              }
-            }
-          }
-          if (tableSpec) break;
-        }
-
+        const tableSpec = findTableSpec(noditAptosIndexerApiSpec, queryRoot);
         if (!tableSpec) {
           return createErrorResponse(`Query root '${queryRoot}' not found in the Aptos Indexer API schema. Use list_nodit_aptos_indexer_api_query_root to see available query roots.`, toolName);
         }
@@ -159,49 +180,31 @@ export function registerAptosIndexerTools(server: McpServer) {
           table: tableSpec.table,
           columns: tableSpec.select_permissions?.[0]?.permission?.columns || [],
           relationships: {
-            object: [],
-            array: []
+            object: mapRelationships(tableSpec.object_relationships),
+            array: mapRelationships(tableSpec.array_relationships)
           }
         };
 
-        if (tableSpec.object_relationships) {
-          spec.relationships.object = tableSpec.object_relationships.map((rel: Relationship) => {
-            if (!rel || typeof rel !== 'object') return { name: 'unknown', remote_table: 'unknown', column_mapping: {} };
-            return {
-              name: rel.name ?? 'unknown',
-              remote_table: rel.using?.manual_configuration?.remote_table?.name ?? 'unknown',
-              column_mapping: rel.using?.manual_configuration?.column_mapping ?? {}
-            };
-          });
-        }
-
-        if (tableSpec.array_relationships) {
-          spec.relationships.array = tableSpec.array_relationships.map((rel: Relationship) => {
-            if (!rel || typeof rel !== 'object') return { name: 'unknown', remote_table: 'unknown', column_mapping: {} };
-            return {
-              name: rel.name ?? 'unknown',
-              remote_table: rel.using?.manual_configuration?.remote_table?.name ?? 'unknown',
-              column_mapping: rel.using?.manual_configuration?.column_mapping ?? {}
-            };
-          });
-        }
-
         return {
           content: [{
-            type: "text",
+            type: "text" as const,
             text: `GraphQL specification for query root '${queryRoot}':\n\n${formatGraphQLSpec(spec)}`
           }]
         };
       } catch (error) {
-        return createErrorResponse(`Error processing Aptos Indexer API schema: ${(error as Error).message}`, toolName);
+        return createErrorResponse(maskInternalError(error, toolName), toolName);
       }
     }
   );
+}
 
+function registerAptosIndexerCallTool(server: McpServer) {
   server.registerTool(
     "call_nodit_aptos_indexer_api",
     {
-      description: "Calls a Nodit Aptos Indexer API. Returns the API response. Before making the call, it's recommended to verify the detailed API specifications using the 'get_nodit_aptos_indexer_api_spec' tool. Please note that using this tool will consume your API quota.",
+      title: TOOL_TITLES.call_nodit_aptos_indexer_api,
+      description: TOOL_DESCRIPTIONS.call_nodit_aptos_indexer_api,
+      annotations: CALLING_TOOL_ANNOTATIONS,
       inputSchema: callNoditAptosIndexerApiInputSchema as unknown as ZodRawShapeCompat,
     },
     async (args) => {
@@ -213,64 +216,28 @@ export function registerAptosIndexerTools(server: McpServer) {
       }
 
       const apiUrl = `https://aptos-${network}.nodit.io/v1/graphql`;
-      const { signal, cleanup } = createTimeoutSignal(TIMEOUT_MS);
 
-      try {
-        const apiOptions: RequestInit = {
-          method: 'POST',
-          headers: {
-            'X-API-KEY': apiKey,
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'User-Agent': 'nodit-mcp-server',
-          },
-          body: JSON.stringify(requestBody),
-          signal,
-        };
+      const result = await callNoditHttp({
+        apiUrl,
+        httpMethod: 'post',
+        apiKey,
+        toolName,
+        requestBody,
+        outboundLog: `Calling Aptos Indexer GraphQL API: ${apiUrl}`,
+      });
 
-        log(`Calling Aptos Indexer GraphQL API: ${apiUrl}`);
-
-        const response = await fetch(apiUrl, apiOptions);
-        const responseBodyText = await response.text();
-
-        if (!response.ok) {
-          const statusMessages: Record<number, string> = {
-            400: `${responseBodyText}. Help the user identify what went wrong in their request. Explain the likely issue based on the error message, and provide a corrected example if possible.`,
-            403: `${responseBodyText}. Let the user know that this API is only available to paid plan users. Explain that their current plan does not include access, and suggest upgrading to a paid tier via https://nodit.io/pricing .`,
-            404: `${responseBodyText}. Let the user know that no data was found for the provided ID or address. This usually means the resource doesn't exist or hasn't been indexed yet. Suggest double-checking the input or trying again later.`,
-            429: `${responseBodyText}. Inform the user that they've reached their current plan's usage limit. Recommend reviewing their usage or upgrading via https://nodit.io/pricing. Optionally mention the Referral Program: https://developer.nodit.io/docs/referral-program.`,
-            500: `${responseBodyText}. This is not the user's fault. Let them know it's likely a temporary issue. Suggest retrying soon or contacting support at https://developer.nodit.io/discuss if the problem continues.`,
-            503: `${responseBodyText}. Inform the user that the service may be under maintenance or experiencing high load. Suggest retrying shortly, and checking the Notice section in the Nodit Developer Portal (https://developer.nodit.io).`
-          };
-
-          if (statusMessages[response.status]) {
-            return createErrorResponse(statusMessages[response.status], toolName);
-          }
-
-          let errorDetails = `Raw error response: ${responseBodyText}`;
-          try {
-            const errorJson = JSON.parse(responseBodyText);
-            errorDetails = `Error Details (JSON):\n${JSON.stringify(errorJson, null, 2)}`;
-          } catch (e) { /* ignore parsing error, use raw text */ }
-          return createErrorResponse(`API Error (Status ${response.status}). ${errorDetails}`, toolName);
-        }
-
-        try {
-          JSON.parse(responseBodyText);
-          log(`Tool (${toolName}): API Success (${response.status})`);
-          return { content: [{ type: "text", text: responseBodyText }] };
-        } catch (parseError) {
-          return createErrorResponse(`API returned OK status but body was not valid JSON. Raw response: ${responseBodyText}`, toolName);
-        }
-
-      } catch (error) {
-        const message = error instanceof Error && error.name === 'AbortError'
-          ? `The request took longer than expected and has been terminated. This may be due to high server load or because the requested data is taking longer to process. Please try again later.`
-          : (error as Error).message;
-        return createErrorResponse(`Network/fetch error calling API: ${message}`, toolName);
-      } finally {
-        cleanup()
+      if (!result.ok) {
+        return createErrorResponse(result.message, toolName);
       }
+      return { content: [{ type: "text" as const, text: result.text }] };
     }
   );
+}
+
+export function registerAptosIndexerTools(server: McpServer) {
+  const noditAptosIndexerApiSpec: AptosIndexerApiSpec = loadNoditAptosIndexerApiSpec();
+
+  registerQueryRootListTool(server, noditAptosIndexerApiSpec);
+  registerAptosIndexerSpecTool(server, noditAptosIndexerApiSpec);
+  registerAptosIndexerCallTool(server);
 }

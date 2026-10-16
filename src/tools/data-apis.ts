@@ -6,6 +6,8 @@ import {
   loadNoditDataApiSpecMap,
   HTTP_METHODS,
 } from "../helper/nodit-apidoc-helper.js";
+import { READ_ONLY_TOOL_ANNOTATIONS, TOOL_DESCRIPTIONS, TOOL_TITLES } from "./tool-metadata.js";
+import { maskInternalError } from "../helper/tool-error.js";
 
 interface DataApiInfo {
   operationId: string;
@@ -21,7 +23,9 @@ export function registerDataApiTools(server: McpServer) {
   server.registerTool(
     "list_nodit_data_apis",
     {
-      description: "Lists available Nodit Data API operations.",
+      title: TOOL_TITLES.list_nodit_data_apis,
+      description: TOOL_DESCRIPTIONS.list_nodit_data_apis,
+      annotations: READ_ONLY_TOOL_ANNOTATIONS,
     },
     async () => {
       const toolName = "list_nodit_data_apis";
@@ -79,7 +83,7 @@ ${formattedList}
 `
         return { content: [{ type: "text", text: content }] };
       } catch (error) {
-        return createErrorResponse(`Failed to list APIs: ${(error as Error).message}`, toolName);
+        return createErrorResponse(maskInternalError(error, toolName), toolName);
       }
     }
   );
