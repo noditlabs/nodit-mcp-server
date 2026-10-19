@@ -12,6 +12,7 @@ import {
   NoditOpenApiSpecType,
   loadNoditApiManifest,
   loadNoditDataApiSpecMap,
+  loadNoditMultichainApiSpecMap,
   loadNoditNodeApiSpecMap,
   loadNoditWebhookApiSpecMap,
   suggestionSuffix,
@@ -58,12 +59,13 @@ export function nodeApiBaseUrl(serverUrls: string[], chain: string, network: str
   return null;
 }
 
-type ApiTarget = { apiUrl: string; httpMethod: string } | { error: string };
+export type ApiTarget = { apiUrl: string; httpMethod: string } | { error: string };
 
-interface SpecMaps {
+export interface SpecMaps {
   node: Map<string, NoditOpenApiSpecType>;
   data: Map<string, NoditOpenApiSpecType>;
   webhook: Map<string, NoditOpenApiSpecType>;
+  multichain: Map<string, NoditOpenApiSpecType>;
 }
 
 export function operationRefusal(
@@ -79,12 +81,15 @@ export function operationRefusal(
   if (isBlockedOperationId(operationId)) {
     return blockedOperationRefusalMessage(operationId, toolName);
   }
+  if (maps.multichain.has(operationId)) {
+    return `The Multichain API operation '${operationId}' is called with the call_nodit_multichain_api tool, not ${toolName}.`;
+  }
   const isNodeApiCall = isNodeApi(operationId, maps.node);
   const canFindOperationId = isNodeApiCall
     ? isValidNodeApi(operationId, maps.node)
     : maps.data.has(operationId);
   if (!canFindOperationId) {
-    const suggestion = suggestionSuffix(operationId, knownOperationIds(maps.node, maps.data, maps.webhook));
+    const suggestion = suggestionSuffix(operationId, knownOperationIds(maps.node, maps.data, maps.webhook, maps.multichain));
     return `Invalid operationId '${operationId}' for chain '${chain}'.${suggestion} Use 'list_nodit_data_apis' or 'list_nodit_node_apis' first.`;
   }
   if (isNodeApiCall && !operationId.includes('-')) {
@@ -147,10 +152,12 @@ export function registerCallNoditApiTool(server: McpServer) {
   const noditNodeApiSpecMap = loadNoditNodeApiSpecMap(manifest);
   const noditDataApiSpecMap = loadNoditDataApiSpecMap(manifest);
   const noditWebhookApiSpecMap = loadNoditWebhookApiSpecMap(manifest);
+  const noditMultichainApiSpecMap = loadNoditMultichainApiSpecMap(manifest);
   const maps: SpecMaps = {
     node: noditNodeApiSpecMap,
     data: noditDataApiSpecMap,
     webhook: noditWebhookApiSpecMap,
+    multichain: noditMultichainApiSpecMap,
   };
 
   server.registerTool(

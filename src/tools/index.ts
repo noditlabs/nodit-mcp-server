@@ -6,6 +6,7 @@ import { registerWebhookApiTools } from "./webhook-apis.js";
 import { registerAptosIndexerTools } from "./aptos-indexer.js";
 import { registerGetNoditApiSpecTool } from "./get-nodit-api-spec.js";
 import { registerCallNoditApiTool } from "./call-nodit-api.js";
+import { registerMultichainApiTools } from "./multichain-apis.js";
 
 export function registerAllTools(server: McpServer) {
   registerApiCategoriesTools(server);
@@ -15,4 +16,5 @@ export function registerAllTools(server: McpServer) {
   registerAptosIndexerTools(server);
   registerGetNoditApiSpecTool(server);
   registerCallNoditApiTool(server);
+  registerMultichainApiTools(server);
 }

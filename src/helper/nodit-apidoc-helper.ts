@@ -72,11 +72,17 @@ export interface FlexibleWebhookApiSection {
   apis?: string[];
 }
 
+export interface MultichainApiSection {
+  supported?: boolean;
+  apis?: string[];
+}
+
 export interface ChainManifest {
   nodeApi?: NodeApiSection;
   web3DataApi?: Web3DataApiSection;
   webhookApi?: WebhookApiSection;
   flexibleWebhookApi?: FlexibleWebhookApiSection;
+  multichainApi?: MultichainApiSection;
 }
 
 export interface NoditApiManifest {
@@ -85,6 +91,8 @@ export interface NoditApiManifest {
 
 export const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete'] as const;
 export type HttpMethod = typeof HTTP_METHODS[number];
+
+export const MULTICHAIN_CHAIN = 'multichain';
 
 export const BLOCKED_OPERATION_IDS = new Set([
   "solana-getProgramAccounts",
@@ -284,6 +292,34 @@ export function loadNoditNodeApiSpecMap(manifest: NoditApiManifest): Map<string,
   return specMap;
 }
 
+let multichainApiSpecMapCache: Map<string, NoditOpenApiSpecType> | null = null;
+
+export function loadNoditMultichainApiSpecMap(manifest: NoditApiManifest): Map<string, NoditOpenApiSpecType> {
+  if (multichainApiSpecMapCache) return multichainApiSpecMapCache;
+  const specMap = new Map<string, NoditOpenApiSpecType>();
+
+  const apis = new Set<string>();
+  for (const chainManifest of Object.values(manifest.chains)) {
+    const multichainApi = chainManifest.multichainApi;
+    if (!multichainApi?.supported) continue;
+    for (const api of multichainApi.apis ?? []) apis.add(api);
+  }
+
+  for (const api of apis) {
+    const filePath = path.join(SPEC_REFERENCE_DIR, 'services', 'multichain-api', `${api}.yaml`);
+    if (!existsSpec(filePath)) continue;
+    try {
+      const spec = loadOpenapiSpecFile(filePath) as NoditOpenApiSpecType;
+      indexOperations(specMap, spec, MULTICHAIN_CHAIN);
+    } catch (error) {
+      log(`Could not load multichain API spec ${filePath}: ${errorMessage(error)}`);
+    }
+  }
+
+  multichainApiSpecMapCache = specMap;
+  return specMap;
+}
+
 export interface Relationship {
   name?: string;
   using?: {
@@ -457,6 +493,57 @@ export function extractWebhookApiChains(manifest: NoditApiManifest): string[] {
   return Object.entries(manifest.chains)
     .filter(([, c]) => c.webhookApi?.supported)
     .map(([chain]) => chain.toLowerCase());
+}
+
+export function extractMultichainApiChains(manifest: NoditApiManifest): string[] {
+  return Object.entries(manifest.chains)
+    .filter(([, c]) => c.multichainApi?.supported && (c.multichainApi.apis?.length ?? 0) > 0)
+    .map(([chain]) => chain.toLowerCase());
+}
+
+export function multichainTargets(
+  specMap: Map<string, NoditOpenApiSpecType>,
+  operationId: string,
+): string[] {
+  const spec = specMap.get(operationId);
+  if (!spec) return [];
+  const details = getApiSpecDetails(spec, operationId);
+  if (!details) return [];
+  const items = details.details.requestBody?.content?.['application/json']?.schema?.properties?.chains?.items;
+  if (!items) return [];
+  let schema = items;
+  if (!Array.isArray(items.enum)) {
+    const ref = typeof items.$ref === 'string' ? items.$ref : '';
+    if (!ref) return [];
+    schema = spec.components?.schemas?.[ref.slice(ref.lastIndexOf('/') + 1)];
+    if (!schema) return [];
+  }
+  if (!Array.isArray(schema.enum)) return [];
+  return schema.enum.filter((v: unknown): v is string => typeof v === 'string' && v.trim().length > 0);
+}
+
+export function extractMultichainNetworks(
+  specMap: Map<string, NoditOpenApiSpecType>,
+): Map<string, string[]> {
+  const targets = new Set<string>();
+  for (const operationId of specMap.keys()) {
+    for (const target of multichainTargets(specMap, operationId)) targets.add(target);
+  }
+
+  const collected = new Map<string, Set<string>>();
+  for (const target of targets) {
+    const dashIdx = target.indexOf('-');
+    if (dashIdx < 0) continue;
+    const chain = target.slice(0, dashIdx).toLowerCase();
+    if (!collected.has(chain)) collected.set(chain, new Set());
+    collected.get(chain)!.add(target.slice(dashIdx + 1));
+  }
+
+  const sorted = new Map<string, string[]>();
+  for (const [chain, set] of collected) {
+    sorted.set(chain, Array.from(set).sort());
+  }
+  return sorted;
 }
 
 function escapeRegex(s: string): string {

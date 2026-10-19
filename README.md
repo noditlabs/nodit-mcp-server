@@ -44,11 +44,12 @@ Nodit MCP Server provides tools enabling AI agents to dynamically discover, unde
 	- `list_nodit_api_categories`
 
 - **Tools for Listing API Operations**  
-  Fetch available operations within a selected category (Node APIs, Data APIs, Aptos Indexer APIs, Webhook APIs).
+  Fetch available operations within a selected category (Node APIs, Data APIs, Aptos Indexer APIs, Webhook APIs, Multichain APIs).
   	- `list_nodit_node_apis`
   	- `list_nodit_data_apis`
   	- `list_nodit_aptos_indexer_api_query_root`
   	- `list_nodit_webhook_apis`
+  	- `list_nodit_multichain_apis`
 
 - **Tools for Getting API Specification**  
   Obtain detailed information for a specific API operation (parameters, request/response schema).
@@ -59,6 +60,7 @@ Nodit MCP Server provides tools enabling AI agents to dynamically discover, unde
   Execute an API call using the operationId and validated parameters.
   	- `call_nodit_api`
   	- `call_nodit_aptos_indexer_api`
+  	- `call_nodit_multichain_api`
   
 Nodit MCP Server communicates using the standard JSON-RPC over stdio protocol, following the Model Context Protocol (MCP) conventions.
 Currently, only stdio-based communication is supported for server-client interactions.

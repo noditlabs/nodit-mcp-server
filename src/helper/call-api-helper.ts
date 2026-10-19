@@ -79,3 +79,16 @@ export function resolvePathAndQuery(
     .join('&');
   return { url: `${resolvedPath}?${queryString}` };
 }
+
+export function joinBaseAndPath(baseUrl: string, pathKey: string): string {
+  const base = baseUrl.replace(/\/+$/, '');
+  const afterScheme = base.includes('://') ? base.slice(base.indexOf('://') + 3) : '';
+  const basePath = afterScheme.includes('/') ? afterScheme.slice(afterScheme.indexOf('/') + 1) : '';
+  const lastSegment = basePath.slice(basePath.lastIndexOf('/') + 1);
+  const relative = pathKey.replace(/^\/+/, '');
+  const firstSegment = relative.includes('/') ? relative.slice(0, relative.indexOf('/')) : relative;
+  if (lastSegment.length > 0 && lastSegment === firstSegment) {
+    return base + relative.slice(firstSegment.length);
+  }
+  return `${base}/${relative}`;
+}

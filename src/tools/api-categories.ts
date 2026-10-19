@@ -4,9 +4,12 @@ import {
   extractChainNetworks,
   extractDataApiChains,
   extractNodeApiChains,
+  extractMultichainApiChains,
+  extractMultichainNetworks,
   extractWebhookApiChains,
   loadNoditApiManifest,
   loadNoditDataApiSpecMap,
+  loadNoditMultichainApiSpecMap,
   loadNoditNodeApiSpecMap,
   loadNoditWebhookApiSpecMap,
 } from "../helper/nodit-apidoc-helper.js";
@@ -35,12 +38,15 @@ export function registerApiCategoriesTools(server: McpServer) {
   const dataApiSpecMap = loadNoditDataApiSpecMap(manifest);
   const nodeApiSpecMap = loadNoditNodeApiSpecMap(manifest);
   const webhookApiSpecMap = loadNoditWebhookApiSpecMap(manifest);
+  const multichainApiSpecMap = loadNoditMultichainApiSpecMap(manifest);
 
   const networksMap = extractChainNetworks([dataApiSpecMap, nodeApiSpecMap, webhookApiSpecMap]);
 
   const dataApiChains = extractDataApiChains(manifest).sort();
   const nodeApiChains = extractNodeApiChains(manifest).sort();
   const webhookApiChains = extractWebhookApiChains(manifest).sort();
+  const multichainApiChains = extractMultichainApiChains(manifest).sort();
+  const multichainNetworks = extractMultichainNetworks(multichainApiSpecMap);
 
   server.registerTool(
     "list_nodit_api_categories",
@@ -52,7 +58,7 @@ export function registerApiCategoriesTools(server: McpServer) {
     async () => {
       const toolName = "list_nodit_api_categories";
       try {
-        const categories = [
+        const categories: Array<{ name: string; description: string; supportedChains: string[]; networks?: Map<string, string[]> }> = [
           {
             name: "Nodit Node API",
             description: "Nodit Blockchain Context provides through shared node endpoints operated reliably by Nodit's professional technical team, you can immediately call blockchain Node APIs to query real-time network changes and send transactions without separate infrastructure operations personnel.",
@@ -73,12 +79,18 @@ export function registerApiCategoriesTools(server: McpServer) {
             description: "Nodit Webhook is a development tool that helps you implement responsive applications for real-time events by sending event occurrence information to the URL registered in the Webhook when a defined on-chain event occurs. You can receive information in real time when important events occur, such as a new transaction occurring on the blockchain or a change in the smart contract status.",
             supportedChains: webhookApiChains,
           },
+          {
+            name: "Nodit Multichain API",
+            description: "Nodit Multichain API operations address several chains in a single request, naming the target chains inside the request body rather than in the URL. Discover its operations with 'list_nodit_multichain_apis', read an operation's specification with 'get_nodit_api_spec', and invoke one with 'call_nodit_multichain_api'. The chains below are addressed as '{chain}-{network}' values inside the request.",
+            supportedChains: multichainApiChains,
+            networks: multichainNetworks,
+          },
         ];
 
         const formattedList = categories.map(category => {
           const networkInfo = category.supportedChains
             .map(chain => {
-              const networks = networksMap.get(chain) ?? [];
+              const networks = (category.networks ?? networksMap).get(chain) ?? [];
               return `    - ${chain}: ${networks.join(', ')}`;
             })
             .join('\n');

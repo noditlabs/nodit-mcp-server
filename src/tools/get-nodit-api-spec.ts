@@ -9,6 +9,7 @@ import {
   knownOperationIds,
   loadNoditApiManifest,
   loadNoditDataApiSpecMap,
+  loadNoditMultichainApiSpecMap,
   loadNoditNodeApiSpecMap,
   loadNoditWebhookApiSpecMap,
   log,
@@ -73,6 +74,7 @@ export function registerGetNoditApiSpecTool(server: McpServer) {
   const noditNodeApiSpecMap = loadNoditNodeApiSpecMap(manifest);
   const noditDataApiSpecMap = loadNoditDataApiSpecMap(manifest);
   const noditWebhookApiSpecMap = loadNoditWebhookApiSpecMap(manifest);
+  const noditMultichainApiSpecMap = loadNoditMultichainApiSpecMap(manifest);
 
   server.registerTool(
     "get_nodit_api_spec",
@@ -103,6 +105,10 @@ export function registerGetNoditApiSpecTool(server: McpServer) {
           const chains = collectChainsForStem(operationId, noditWebhookApiSpecMap);
           if (chains.length > 0) return missingChainPrefixError(operationId, chains, toolName);
         }
+      } else if (noditMultichainApiSpecMap.has(operationId)) {
+        postfix = "\nCall this API with the call_nodit_multichain_api tool.";
+        const spec = noditMultichainApiSpecMap.get(operationId);
+        if (spec) { specDocument = spec; apiInfo = getApiSpecDetails(spec, operationId); }
       } else if (noditDataApiSpecMap.has(operationId)) {
         const spec = noditDataApiSpecMap.get(operationId);
         if (spec) { specDocument = spec; apiInfo = getApiSpecDetails(spec, operationId); }
@@ -111,12 +117,18 @@ export function registerGetNoditApiSpecTool(server: McpServer) {
         if (chains.length > 0) return missingChainPrefixError(operationId, chains, toolName);
         const nodeChains = collectChainsForStem(operationId, noditNodeApiSpecMap);
         if (nodeChains.length > 0) return missingChainPrefixError(operationId, nodeChains, toolName);
+        if (collectChainsForStem(operationId, noditMultichainApiSpecMap).length > 0) {
+          return createErrorResponse(
+            `'${operationId}' is a Multichain API operation and is not addressed per chain. Use the operationId 'multichain-${operationId}' here and in the call_nodit_multichain_api tool.`,
+            toolName,
+          );
+        }
       }
 
       if (!apiInfo) {
         const suggestion = suggestionSuffix(
           operationId,
-          knownOperationIds(noditNodeApiSpecMap, noditDataApiSpecMap, noditWebhookApiSpecMap),
+          knownOperationIds(noditNodeApiSpecMap, noditDataApiSpecMap, noditWebhookApiSpecMap, noditMultichainApiSpecMap),
         );
         return createErrorResponse(`Spec for operationId '${operationId}' not found.${suggestion}`, toolName);
       }

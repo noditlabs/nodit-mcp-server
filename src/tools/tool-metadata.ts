@@ -24,6 +24,8 @@ export const TOOL_TITLES = {
   get_nodit_aptos_indexer_api_spec: "Get Nodit Aptos Indexer API Spec",
   call_nodit_api: "Call Nodit API",
   call_nodit_aptos_indexer_api: "Call Nodit Aptos Indexer API",
+  list_nodit_multichain_apis: "List Nodit Multichain APIs",
+  call_nodit_multichain_api: "Call Nodit Multichain API",
 } as const;
 
 export const TOOL_DESCRIPTIONS = {
@@ -39,9 +41,13 @@ export const TOOL_DESCRIPTIONS = {
   get_nodit_aptos_indexer_api_spec:
     "Returns the GraphQL specification for a specific query root in the Nodit Aptos Indexer API.",
   call_nodit_api:
-    "This function calls a specific Nodit Blockchain Context API using its operationId. Before making the call, it's recommended to verify the detailed API specifications using the 'get_nodit_api_spec' tool. API reference: https://developer.nodit.io/api/api-overview. Please note that using this tool will consume your API quota.",
+    "Calls an operation from the Nodit Node API or Nodit Data API categories — the operations listed by 'list_nodit_node_apis' and 'list_nodit_data_apis', whose target chain and network go in the URL. Nodit Webhook API operations cannot be invoked with this tool. Before making the call, it's recommended to verify the detailed API specifications using the 'get_nodit_api_spec' tool. API reference: https://developer.nodit.io/api/api-overview. Please note that using this tool will consume your API quota.",
   call_nodit_aptos_indexer_api:
-    "Calls a Nodit Aptos Indexer API. Returns the API response. Before making the call, it's recommended to verify the detailed API specifications using the 'get_nodit_aptos_indexer_api_spec' tool. API reference: https://developer.nodit.io/api/api-overview. Please note that using this tool will consume your API quota.",
+    "Calls a GraphQL query from the Nodit Aptos Indexer API category — the query roots listed by 'list_nodit_aptos_indexer_api_query_root'. Returns the API response. Before making the call, it's recommended to verify the detailed API specifications using the 'get_nodit_aptos_indexer_api_spec' tool. API reference: https://developer.nodit.io/api/api-overview. Please note that using this tool will consume your API quota.",
+  list_nodit_multichain_apis:
+    "Lists available Nodit Multichain API operations. Each one addresses several chains in a single request and names them inside the request body.",
+  call_nodit_multichain_api:
+    "Calls an operation from the Nodit Multichain API category — the operations listed by 'list_nodit_multichain_apis'. These operations address several chains in one request and name them inside the request body rather than in the URL. Verify the request body shape with 'get_nodit_api_spec' before making the call. Please note that using this tool will consume your API quota.",
 } as const;
 
 export const TOOL_PARAM_DESCRIPTIONS = {
@@ -61,4 +67,8 @@ export const TOOL_PARAM_DESCRIPTIONS = {
     "The operationId to get the resolved specification for. Must include the chain prefix in `{chain}-{methodName}` format (e.g., 'ethereum-eth_blocknumber', 'aptos-getAccount', 'ethereum-createWebhook'). Method-name-only input (e.g., 'eth_blocknumber') is rejected with guidance on the available chains.",
   APTOS_QUERY_ROOT:
     "The name of the query root to get the specification for. Use list_nodit_aptos_indexer_api_query_root to see available query roots.",
+  MULTICHAIN_OPERATION_ID:
+    "Multichain API operationId to call, as listed by 'list_nodit_multichain_apis'.",
+  MULTICHAIN_REQUEST_BODY:
+    "JSON request body matching the operation's spec from 'get_nodit_api_spec'. The target chains go inside this body as '{chain}-{network}' values.",
 } as const;
