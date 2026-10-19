@@ -74,6 +74,7 @@ The API list is as follows.
 - Make sure to use 'call_nodit_api' with the correct chain, network, and operationId.
 - The operationId format rules above are for the 'call_nodit_api' tool only — the actual JSON-RPC \`method\` field on the wire still follows the upstream RPC specification (e.g., \`eth_blockNumber\` in camelCase).
 - Cosmos-based chains (e.g. cosmos, injective, celestia, sei) expose cometbft JSON-RPC methods as \`{chain}-{methodName}\` and cometbft REST methods as \`{chain}-rest-{methodName}\` where REST specs exist; check \`get_nodit_api_spec\` because JSON-RPC uses requestBody while REST uses pathParams/queryParams.
+- Chains with a fullnode HTTP API (tron) expose it as \`{chain}-{methodName}\` (e.g., \`tron-getaccount\`) and the solidity-node variant as \`{chain}-solidity-{methodName}\` (e.g., \`tron-solidity-getaccount\`); these are REST-style rather than JSON-RPC — check \`get_nodit_api_spec\` because POST operations take requestBody and GET operations take queryParams.
 - Method groups (combine any chain from \`supported chains\` with a method from \`methods\` to form the operationId, e.g., \`ethereum-eth_blocknumber\`):
 ${formattedGroups}
 - Chain-specific operations (use the operationId as shown):

@@ -126,6 +126,31 @@ function existsSpec(filePath: string): boolean {
   }
 }
 
+const NODE_API_FAMILY_DIRS: Array<{ dir: string; operationIdStemPrefix?: string }> = [
+  { dir: 'fullnode-http-api' },
+  { dir: 'fullnode-solidity-http-api', operationIdStemPrefix: 'solidity' },
+];
+
+function collectYamlFiles(dir: string, out: string[]) {
+  let entries: fs.Dirent[];
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) collectYamlFiles(full, out);
+    else if (entry.isFile() && entry.name.endsWith('.yaml')) out.push(full);
+  }
+}
+
+function listSpecFiles(dir: string): string[] {
+  const files: string[] = [];
+  collectYamlFiles(dir, files);
+  return files.sort();
+}
+
 // manifest 키와 실제 chains 디렉토리명의 대소문자가 어긋날 수 있다(예: manifest는
 // worldchain, 디렉토리는 worldChain). case-sensitive 파일시스템에서도 스펙을 찾도록
 // 디렉토리명을 한 번 스캔해 정확 매칭 우선, 없으면 소문자 매칭으로 resolve한다.
@@ -286,6 +311,17 @@ export function loadNoditNodeApiSpecMap(manifest: NoditApiManifest): Map<string,
         }
       }
     }
+
+    for (const { dir, operationIdStemPrefix } of NODE_API_FAMILY_DIRS) {
+      for (const filePath of listSpecFiles(path.join(CHAINS_DIR, resolveChainDir(chain), dir))) {
+        try {
+          const spec = loadOpenapiSpecFile(filePath) as NoditOpenApiSpecType;
+          indexOperations(specMap, spec, chain, operationIdStemPrefix);
+        } catch (error) {
+          log(`Could not load node spec ${filePath}: ${errorMessage(error)}`);
+        }
+      }
+    }
   }
 
   nodeApiSpecMapCache = specMap;
@@ -398,7 +434,8 @@ export function isBlockedOperationId(operationId: string): boolean {
 export function methodStem(operationId: string): string {
   const dashIndex = operationId.indexOf('-');
   const stem = dashIndex < 0 ? operationId : operationId.slice(dashIndex + 1);
-  return stem.startsWith('rest-') ? stem.slice('rest-'.length) : stem;
+  const withoutRest = stem.startsWith('rest-') ? stem.slice('rest-'.length) : stem;
+  return withoutRest.startsWith('solidity-') ? withoutRest.slice('solidity-'.length) : withoutRest;
 }
 
 export function lenientOperationIdKey(operationId: string): string {
