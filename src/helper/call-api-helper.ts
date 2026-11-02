@@ -11,13 +11,23 @@ export function createTimeoutSignal(timeoutMs: number): { signal: AbortSignal; c
 
 export const JSON_RPC_METHOD = 'method';
 
+// NEAR names its `query` and `changes` operations after the request type they fix
+// (`near-query_view_account`), while the JSON-RPC method stays `query` or `changes`.
+const NEAR_METHOD_FAMILIES = ['query', 'changes'];
+
+export function jsonRpcMethod(operationId: string): string {
+  const stem = methodStem(operationId);
+  if (!operationId.startsWith('near-')) return stem;
+  return NEAR_METHOD_FAMILIES.find(family => stem.startsWith(`${family}_`)) ?? stem;
+}
+
 export function bodyMethodMismatch(
   operationId: string,
   requestBody: Record<string, any> | undefined,
 ): string | null {
   const bodyMethod = requestBody?.[JSON_RPC_METHOD];
   if (typeof bodyMethod !== 'string') return null;
-  const expected = methodStem(operationId);
+  const expected = jsonRpcMethod(operationId);
   if (bodyMethod.toLowerCase() === expected.toLowerCase()) return null;
   return (
     `requestBody.method '${bodyMethod}' does not match operationId '${operationId}', whose method is ` +
