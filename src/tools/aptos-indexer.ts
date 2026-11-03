@@ -71,13 +71,12 @@ const getNoditAptosIndexerApiSpecInputSchema = {
   queryRoot: z.string().describe(TOOL_PARAM_DESCRIPTIONS.APTOS_QUERY_ROOT),
 };
 
-// `network` lands in the host name, so anything beyond a plain name would send the API key elsewhere.
-const APTOS_NETWORK_PATTERN = /^[a-z0-9]+$/;
+// Only mainnet serves the indexer. `network` also lands in the host name, so the allowlist keeps the API key on Nodit hosts.
+const APTOS_NETWORKS = ["mainnet"] as const;
 
 const callNoditAptosIndexerApiInputSchema = {
   network: z
-    .string()
-    .regex(APTOS_NETWORK_PATTERN, "Use a network name of lowercase letters and digits, e.g. 'mainnet' or 'testnet'.")
+    .enum(APTOS_NETWORKS, { error: "Only 'mainnet' is supported." })
     .describe(TOOL_PARAM_DESCRIPTIONS.APTOS_NETWORK),
   requestBody: z.record(z.string(), z.any()).describe(TOOL_PARAM_DESCRIPTIONS.APTOS_REQUEST_BODY),
 };

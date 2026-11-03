@@ -61,7 +61,7 @@ export const TOOL_PARAM_DESCRIPTIONS = {
     "Query string parameters appended to the request URL (e.g. {\"pagination.limit\": 10}). Map each 'query' parameter from get_nodit_api_spec to a key here.",
   REQUEST_BODY:
     "JSON request body for POST/PUT endpoints (JSON-RPC, etc.). Not for path/query parameters — use pathParams/queryParams for those.",
-  APTOS_NETWORK: "Nodit network to call. e.g. 'mainnet' or 'testnet'.",
+  APTOS_NETWORK: "Nodit network to call. Only 'mainnet' is supported.",
   APTOS_REQUEST_BODY: "Graphql request body matching the API's spec.",
   SPEC_OPERATION_ID:
     "The operationId to get the resolved specification for. Must include the chain prefix in `{chain}-{methodName}` format (e.g., 'ethereum-eth_blocknumber', 'aptos-getAccount', 'ethereum-createWebhook'). Method-name-only input (e.g., 'eth_blocknumber') is rejected with guidance on the available chains.",
